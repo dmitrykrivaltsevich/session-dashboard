@@ -1,23 +1,45 @@
 # Claude Code · Session Analytics Dashboard
 
 Interactive dashboard exploring **how long your Claude Code sessions actually take**
-(API wall time), built from your local session transcripts in `~/.claude/projects/`.
+(API wall time) — plus what they cost, what they touched, and how you drive Claude —
+built from your local session transcripts in `~/.claude/projects/`.
 
-## Open it
+Everything runs locally with **no third-party dependencies**: a stdlib-only Python
+ETL produces `data.js`, and a single self-contained `dashboard.html` renders it
+(ECharts is vendored locally, with a CDN fallback).
 
-```bash
-open dashboard.html         # macOS default browser
-```
-
-Everything is local and self-contained — `dashboard.html` loads `data.js` (your
-extracted data) and `echarts.min.js` (the charting library) from this folder. No
-network needed.
-
-## Regenerate the data
+## Quick start
 
 ```bash
-python3 etl.py             # re-scans ~/.claude/projects -> data.js
+make open      # build data.js from your transcripts + open the dashboard
+# or:
+make serve     # build + serve at http://localhost:8000/dashboard.html
 ```
+
+Without `make`:
+
+```bash
+python3 etl.py            # scan ~/.claude/projects -> ./data.js
+open dashboard.html       # macOS; or just open the file in any browser
+```
+
+`data.js` is generated and **git-ignored** (it embeds your local file paths) — run
+the ETL once after cloning. The dashboard shows a "run `etl.py`" prompt if it's
+missing.
+
+## Configuration
+
+The ETL takes no required arguments. Override the defaults when needed:
+
+```bash
+python3 etl.py --root /custom/path/.claude/projects --out /tmp/data.js
+CLAUDE_PROJECTS_DIR=/custom/path python3 etl.py     # via env var
+make data ROOT=/custom/path                          # via make
+```
+
+Project names are derived from each session's recorded working directory, so they
+read cleanly (`kb`, `apache-kafka-architecture`) on any machine — nothing about the
+host path or username is hardcoded. Requires **Python 3.8+** (standard library only).
 
 ## The three duration metrics (toggle in the UI)
 
@@ -86,8 +108,20 @@ actually cost at 0.1×.
 Metric · date range (All / 30d / 14d / 7d) · model · project chips
 (click one to isolate, click again to restore all). Everything updates live.
 
-## Scope
+## How it works
 
-Analyses the **70 top-level session files** (67 with usable timestamps),
-attributing the **1,511 subagent / workflow** transcripts' tokens to their parent
-sessions.
+Each top-level session transcript (`<project>/<uuid>.jsonl`) is one session.
+Sub-agent and workflow transcripts (under `subagents/` / `workflows/`) are attributed
+to their parent session, so tool calls, tokens, and cost include delegated work.
+File paths are stored home-relative and shortened; the generated `data.js` stays on
+your machine.
+
+## Files
+
+| File | Tracked | Purpose |
+|---|---|---|
+| `etl.py` | ✓ | Stdlib-only extractor → `data.js` |
+| `dashboard.html` | ✓ | Self-contained UI (inlined CSS/JS) |
+| `echarts.min.js` | ✓ | Vendored charting lib (CDN fallback built in) |
+| `Makefile` | ✓ | `make data` / `serve` / `open` / `clean` |
+| `data.js` | — | Generated, machine-specific (git-ignored) |

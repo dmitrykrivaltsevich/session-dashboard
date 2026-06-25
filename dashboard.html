@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Claude Code · Session Analytics</title>
+<script src="echarts.min.js"></script>
+<script>/* fall back to CDN if the vendored copy is absent */
+if (typeof echarts === 'undefined')
+  document.write('<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"><\/script>');</script>
+<script src="data.js"></script>
+<style>
+  :root{
+    --bg:#ffffff; --panel:#ffffff; --ink:#16161d; --muted:#8a8a99;
+    --line:#ededf2; --line2:#f4f4f7; --accent:#4f46e5; --accent-soft:#eef0fe;
+    --heat0:#f3f4ff; --heat1:#4338ca; --pos:#16a34a; --shadow:0 1px 2px rgba(20,20,40,.04),0 8px 24px rgba(20,20,40,.04);
+    --radius:16px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;font-feature-settings:"tnum" 1,"cv01" 1;}
+  a{color:var(--accent);text-decoration:none}
+  .wrap{max-width:1280px;margin:0 auto;padding:34px 28px 80px}
+  header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:26px}
+  h1{font-size:25px;font-weight:680;letter-spacing:-.02em;margin:0}
+  .sub{color:var(--muted);font-size:13.5px;margin-top:6px;line-height:1.5}
+  .gen{color:var(--muted);font-size:12px;text-align:right;line-height:1.6}
+  .gen b{color:var(--ink);font-weight:600}
+
+  /* KPI cards */
+  .kpis{display:grid;grid-template-columns:repeat(8,1fr);gap:13px;margin-bottom:22px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px 16px 14px;box-shadow:var(--shadow)}
+  .kpi .lab{color:var(--muted);font-size:11.5px;font-weight:560;text-transform:uppercase;letter-spacing:.04em}
+  .kpi .val{font-size:24px;font-weight:700;letter-spacing:-.02em;margin-top:9px;line-height:1}
+  .kpi .hint{color:var(--muted);font-size:11.5px;margin-top:7px}
+  .kpi .val small{font-size:14px;font-weight:600;color:var(--muted);margin-left:1px}
+
+  /* Filter bar */
+  .filters{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.86);
+    backdrop-filter:saturate(180%) blur(10px);-webkit-backdrop-filter:saturate(180%) blur(10px);
+    border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:22px;
+    display:flex;align-items:center;gap:16px;flex-wrap:wrap;box-shadow:var(--shadow)}
+  .fgroup{display:flex;align-items:center;gap:8px}
+  .flab{font-size:11.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+  .seg{display:inline-flex;background:var(--line2);border-radius:10px;padding:3px}
+  .seg button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:12.5px;font-weight:560;
+    padding:6px 11px;border-radius:8px;cursor:pointer;transition:.12s}
+  .seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.06)}
+  select,.btn{font:inherit;font-size:12.5px;color:var(--ink);background:#fff;border:1px solid var(--line);
+    border-radius:9px;padding:7px 10px;cursor:pointer;outline:none}
+  select:focus{border-color:var(--accent)}
+  .btn:hover{border-color:#dcdce4}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;max-width:560px}
+  .chip{font-size:12px;padding:5px 10px;border-radius:20px;border:1px solid var(--line);background:#fff;
+    color:#555;cursor:pointer;user-select:none;transition:.12s;white-space:nowrap}
+  .chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .spacer{flex:1}
+
+  /* Chart grid */
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:18px 18px 8px;box-shadow:var(--shadow);min-width:0}
+  .card.full{grid-column:1 / -1}
+  .card h3{margin:0;font-size:14.5px;font-weight:640;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
+  .card .desc{color:var(--muted);font-size:12px;margin:5px 0 2px;line-height:1.45}
+  .chart{width:100%;height:300px}
+  .chart.tall{height:340px}
+  .chart.cal{height:200px}
+  .tag{font-size:10.5px;font-weight:600;color:var(--accent);background:var(--accent-soft);
+    padding:2px 7px;border-radius:6px;letter-spacing:.02em}
+
+  /* Table */
+  .tablewrap{overflow:auto;border-radius:10px;margin-top:6px;max-height:460px}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{text-align:right;padding:8px 12px;border-bottom:1px solid var(--line2);white-space:nowrap}
+  th:first-child,td:first-child{text-align:left}
+  th{position:sticky;top:0;background:#fff;color:var(--muted);font-weight:600;font-size:11px;
+    text-transform:uppercase;letter-spacing:.03em;cursor:pointer;user-select:none;z-index:1}
+  th:hover{color:var(--ink)}
+  tbody tr:hover{background:var(--line2)}
+  td.proj{color:var(--ink);font-weight:560}
+  td.mut{color:var(--muted)}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:middle}
+  .est{font-size:10px;color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:0 4px;margin-left:5px}
+
+  .note{font-size:12px;color:var(--muted);line-height:1.6;background:var(--line2);border-radius:12px;
+    padding:14px 16px;margin-top:20px}
+  .note b{color:var(--ink)}
+  .footcols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px}
+  .divider{grid-column:1/-1;display:flex;align-items:center;gap:14px;margin:14px 2px 0}
+  .divider h2{font-size:17px;font-weight:680;letter-spacing:-.02em;margin:0;white-space:nowrap}
+  .divider .ln{flex:1;height:1px;background:var(--line)}
+  .divider .sm{color:var(--muted);font-size:12.5px}
+  @media(max-width:1280px){.kpis{grid-template-columns:repeat(4,1fr)}}
+  @media(max-width:1080px){.kpis{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.card.full{grid-column:auto}.footcols{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Claude Code · Session Analytics</h1>
+      <div class="sub">How long sessions actually take — exploring <b>API wall time</b> across every local session transcript.<br>
+        Toggle the duration metric, slice by project / model / date, and watch every view update.</div>
+    </div>
+    <div class="gen" id="gen"></div>
+  </header>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="filters">
+    <div class="fgroup">
+      <span class="flab">Metric</span>
+      <div class="seg" id="metricSeg">
+        <button data-m="active" class="on">Active time</button>
+        <button data-m="turn">Turn time</button>
+        <button data-m="span">Calendar span</button>
+      </div>
+    </div>
+    <div class="fgroup">
+      <span class="flab">Range</span>
+      <div class="seg" id="rangeSeg">
+        <button data-r="all" class="on">All</button>
+        <button data-r="30">30d</button>
+        <button data-r="14">14d</button>
+        <button data-r="7">7d</button>
+      </div>
+    </div>
+    <div class="fgroup">
+      <span class="flab">Model</span>
+      <select id="modelSel"><option value="">All models</option></select>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn" id="resetBtn">Reset</button>
+  </div>
+
+  <div class="fgroup" style="margin:-8px 2px 20px;align-items:flex-start">
+    <span class="flab" style="margin-top:6px">Projects</span>
+    <div class="chips" id="projChips"></div>
+  </div>
+
+  <div class="grid">
+    <div class="card full">
+      <h3>Activity over time <span class="tag" id="trendTag">active time / day</span></h3>
+      <div class="desc">Daily total of the selected metric (bars) with a 7-day moving average (line). Reveals bursts, streaks and quiet spells.</div>
+      <div class="chart tall" id="trend"></div>
+    </div>
+
+    <div class="card">
+      <h3>When I work <span class="tag">active hrs</span></h3>
+      <div class="desc">Active engagement by hour of day × day of week (local time, idle excluded).</div>
+      <div class="chart tall" id="heat"></div>
+    </div>
+
+    <div class="card">
+      <h3>Session length distribution <span class="tag" id="histTag">active</span></h3>
+      <div class="desc">How sessions spread across duration buckets. Most are short; a few are marathons.</div>
+      <div class="chart tall" id="hist"></div>
+    </div>
+
+    <div class="card full">
+      <h3>Calendar of active time <span class="tag">active hrs / day</span></h3>
+      <div class="desc">GitHub-style contribution map — darker means more active time that day.</div>
+      <div class="chart cal" id="cal"></div>
+    </div>
+
+    <div class="card">
+      <h3>Time by project <span class="tag" id="projTag">active</span></h3>
+      <div class="desc">Where the hours go. Bar = total duration; label shows session count.</div>
+      <div class="chart" id="proj"></div>
+    </div>
+
+    <div class="card">
+      <h3>Duration vs output tokens <span class="tag" id="scatTag">active</span></h3>
+      <div class="desc">Each bubble is a session — size = tool calls, colour = project. Are long sessions productive?</div>
+      <div class="chart" id="scatter"></div>
+    </div>
+
+    <div class="card">
+      <h3>Turn length distribution <span class="tag">turn_duration</span></h3>
+      <div class="desc">Every individual turn that recorded a duration — the atoms of a session.</div>
+      <div class="chart" id="turnhist"></div>
+    </div>
+
+    <div class="card">
+      <h3>Model mix <span class="tag">by active time</span></h3>
+      <div class="desc">Share of active time per primary model.</div>
+      <div class="chart" id="models"></div>
+    </div>
+
+    <div class="divider">
+      <h2>Anatomy of the work</h2><div class="ln"></div>
+      <span class="sm">what Claude actually did inside these sessions — tools, files, commands &amp; flow (incl. subagents)</span>
+    </div>
+
+    <div class="card full">
+      <h3>Tool usage <span class="tag">calls by category</span></h3>
+      <div class="desc">Every tool invocation, grouped — Shell, Files, Web, Agents, Browser. Area ∝ number of calls.</div>
+      <div class="chart tall" id="tooltree"></div>
+    </div>
+
+    <div class="card">
+      <h3>Tool workflow <span class="tag">transitions</span></h3>
+      <div class="desc">How Claude moves between tools — edges are consecutive tool pairs (self-repeats excluded). Hover to focus.</div>
+      <div class="chart tall" id="net"></div>
+    </div>
+
+    <div class="card">
+      <h3>File-type footprint <span class="tag">read · write · edit</span></h3>
+      <div class="desc">Which file types get touched. The language fingerprint of the work.</div>
+      <div class="chart tall" id="filetree"></div>
+    </div>
+
+    <div class="card">
+      <h3>Shell commands <span class="tag">top verbs</span></h3>
+      <div class="desc">First word of every <code>Bash</code> call — the muscle memory of the terminal.</div>
+      <div class="chart" id="bash"></div>
+    </div>
+
+    <div class="card">
+      <h3>Throughput <span class="tag">output tok / active hr</span></h3>
+      <div class="desc">How many output tokens each project produces per hour of active time.</div>
+      <div class="chart" id="throughput"></div>
+    </div>
+
+    <div class="card full">
+      <h3>Token economics <span class="tag" id="cacheTag">cache</span></h3>
+      <div class="desc">Where tokens flow. Cache reads (≈10× cheaper than fresh input) dominate — that's the prompt cache doing the heavy lifting.</div>
+      <div class="chart" id="tokens" style="height:200px"></div>
+    </div>
+
+    <div class="divider">
+      <h2>What I work on, make &amp; spend</h2><div class="ln"></div>
+      <span class="sm">topics researched, output produced, power-features used, and the dollar cost behind it</span>
+    </div>
+
+    <div class="card full">
+      <h3>Skills &amp; power-features <span class="tag">invocations</span></h3>
+      <div class="desc">How you actually drive Claude — research harnesses, spec-driven-development, knowledge base. Not "chat &amp; paste".</div>
+      <div class="chart" id="skills"></div>
+    </div>
+
+    <div class="card">
+      <h3>Research footprint <span class="tag">top domains</span></h3>
+      <div class="desc">Where Claude looked things up via <code>WebFetch</code> — the shape of what you investigate.</div>
+      <div class="chart" id="domains"></div>
+    </div>
+
+    <div class="card">
+      <h3>Search themes <span class="tag">query words</span></h3>
+      <div class="desc">Most frequent words across every <code>WebSearch</code> — sized by frequency.</div>
+      <div class="chart" id="themes"></div>
+    </div>
+
+    <div class="card">
+      <h3>Output ledger <span class="tag">lines ±</span></h3>
+      <div class="desc">Code &amp; docs changed per project — <span style="color:#16a34a">added</span> vs <span style="color:#ef4444">removed</span> via Edit.</div>
+      <div class="chart" id="churn"></div>
+    </div>
+
+    <div class="card">
+      <h3>Codebase hotspots <span class="tag">most-touched files</span></h3>
+      <div class="desc">Files read / written / edited most — area ∝ touches, colour by type. Hover for full path.</div>
+      <div class="chart" id="hotspots"></div>
+    </div>
+
+    <div class="card full">
+      <h3>Estimated cost <span class="tag" id="costTag">list price</span></h3>
+      <div class="desc">Per-project spend at current public list prices (per-model rates, with cache reads at 0.1× and 5-min/1-hour cache writes priced separately). The prompt cache is doing enormous work — see "saved by cache" below.</div>
+      <div class="chart" id="cost"></div>
+    </div>
+
+    <div class="card full">
+      <h3>Sessions <span class="tag" id="cntTag"></span></h3>
+      <div class="desc">Click a column header to sort. Reflects all filters above.</div>
+      <div class="tablewrap"><table id="tbl"><thead></thead><tbody></tbody></table></div>
+    </div>
+  </div>
+
+  <div class="note">
+    <b>What "API wall time" means here.</b> Each session transcript is replayed and three durations are computed:
+    <b>Active time</b> — the sum of gaps between successive events with idle gaps (&gt; <span id="capLab"></span>) removed; a uniform, idle-free estimate available for every session (calibrated to ≈1.08× of Claude's own turn timing).
+    <b>Turn time</b> — the sum of Claude Code's recorded <code>turn_duration</code> values (real per-turn wall clock, including in-turn waits); shown for the <span id="turnCntLab"></span> sessions that recorded it, falling back to active time otherwise.
+    <b>Calendar span</b> — first to last event, including all idle. Heatmap & calendar always use idle-free active time. Sessions marked <span class="est">est</span> had no turn timing recorded.
+  </div>
+</div>
+
+<script>
+// ---------- bootstrap guard ----------
+if (typeof DATA === 'undefined') {
+  document.body.innerHTML = '<div style="max-width:680px;margin:18vh auto;font-family:-apple-system,Segoe UI,sans-serif;color:#16161d;text-align:center">'
+    + '<h1 style="font-size:22px;font-weight:680">No data yet</h1>'
+    + '<p style="color:#8a8a99;line-height:1.6">Generate <code>data.js</code> first, then reload this page:</p>'
+    + '<pre style="display:inline-block;text-align:left;background:#f4f4f7;border-radius:10px;padding:14px 18px;font-size:13px">python3 etl.py</pre></div>';
+  throw new Error('data.js not found — run: python3 etl.py');
+}
+// ---------- helpers ----------
+const S0 = DATA.sessions;
+const $ = s => document.querySelector(s);
+const DOW = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const PALETTE = ['#4f46e5','#0ea5e9','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316','#6366f1','#84cc16','#06b6d4','#a855f7','#e11d48'];
+const projects = [...new Set(S0.map(s=>s.project))].sort((a,b)=>tot(b)-tot(a));
+function tot(p){return S0.filter(s=>s.project===p).reduce((a,s)=>a+s.active,0);}
+const projColor = {}; projects.forEach((p,i)=>projColor[p]=PALETTE[i%PALETTE.length]);
+
+function fmtDur(ms){
+  if(ms==null) return '–';
+  const s=ms/1000; if(s<60) return Math.round(s)+'s';
+  const m=s/60; if(m<60) return m.toFixed(m<10?1:0)+'m';
+  const h=m/60; return h<10? h.toFixed(1)+'h' : Math.round(h)+'h';
+}
+function fmtNum(n){ if(n>=1e6) return (n/1e6).toFixed(n<1e7?2:1)+'M'; if(n>=1e3) return (n/1e3).toFixed(n<1e4?1:0)+'k'; return ''+Math.round(n); }
+function median(a){ if(!a.length) return 0; const b=[...a].sort((x,y)=>x-y); const i=b.length>>1; return b.length%2?b[i]:(b[i-1]+b[i])/2; }
+
+// content-stat helpers
+function aggCounts(F,field){ const o={}; F.forEach(s=>{ const m=s[field]; for(const k in m) o[k]=(o[k]||0)+m[k]; }); return o; }
+const CATCOLOR={Shell:'#4f46e5',Files:'#0ea5e9',Web:'#10b981',Agents:'#f59e0b','Browser/MCP':'#ec4899',Other:'#94a3b8',
+  Docs:'#6366f1',Code:'#0ea5e9',Media:'#f59e0b',Data:'#10b981'};
+function toolCat(n){ if(n==='Bash')return 'Shell';
+  if(['Read','Write','Edit','NotebookEdit'].includes(n))return 'Files';
+  if(['WebSearch','WebFetch'].includes(n))return 'Web';
+  if(n.startsWith('mcp__'))return 'Browser/MCP';
+  if(['Agent','Workflow','TaskCreate','TaskUpdate','TaskGet','TaskList','TaskStop','TaskOutput','StructuredOutput','ToolSearch'].includes(n))return 'Agents';
+  return 'Other'; }
+function shortTool(n){ return n.startsWith('mcp__')? n.replace('mcp__','').replace('claude-in-chrome__','chrome:') : n; }
+const EXTCAT={md:'Docs',txt:'Docs',rst:'Docs',org:'Docs',adoc:'Docs',
+  java:'Code',rs:'Code',go:'Code',scala:'Code',ts:'Code',tsx:'Code',js:'Code',jsx:'Code',py:'Code',sh:'Code',rb:'Code',
+  c:'Code',cpp:'Code',h:'Code',hpp:'Code',kt:'Code',swift:'Code',sql:'Code',toml:'Code',yaml:'Code',yml:'Code',lua:'Code',php:'Code',
+  html:'Web',css:'Web', png:'Media',jpeg:'Media',jpg:'Media',gif:'Media',svg:'Media',webp:'Media',pdf:'Media',
+  json:'Data',jsonl:'Data',csv:'Data',parquet:'Data',out:'Data',output:'Data',log:'Data',ndjson:'Data'};
+function extCat(e){ return EXTCAT[e]||'Other'; }
+function treeData(counts,catFn,shortFn){
+  const cats={};
+  for(const k in counts){ const c=catFn(k); (cats[c]=cats[c]||[]).push({name:(shortFn?shortFn(k):k),value:counts[k]}); }
+  return Object.entries(cats).map(([c,ch])=>({name:c,itemStyle:{color:CATCOLOR[c]||'#94a3b8'},
+    children:ch.sort((a,b)=>b.value-a.value)})).sort((a,b)=>
+      b.children.reduce((x,y)=>x+y.value,0)-a.children.reduce((x,y)=>x+y.value,0));
+}
+// ---- cost helpers (pricing comes from the data file, computed from current rates) ----
+const PRICE=DATA.pricing, PM=PRICE.models;
+function sessionCost(s){ let c=0;
+  for(const m in s.modelTok){ const p=PM[m]; if(!p) continue; const t=s.modelTok[m];
+    c += (t.in*p[0] + t.out*p[1] + t.cr*p[0]*PRICE.cacheRead
+        + t.cc5*p[0]*PRICE.cacheWrite5m + t.cc1*p[0]*PRICE.cacheWrite1h)/1e6; }
+  return c; }
+function cacheSaved(s){ let v=0;
+  for(const m in s.modelTok){ const p=PM[m]; if(!p) continue;
+    v += s.modelTok[m].cr*p[0]*(1-PRICE.cacheRead)/1e6; }
+  return v; }
+function fmtUSD(v){ return v>=1000? '$'+(v/1000).toFixed(v<10000?1:0)+'k' : '$'+v.toFixed(v<10?2:0); }
+function cleanSkill(n){ return n.replace('claude-skills:','').replace('speckit-','spec:'); }
+
+// ---------- state ----------
+let metric='active', range='all', model='', selProj=new Set(projects), sortKey='start', sortDir=-1;
+function metricVal(s){ if(metric==='active')return s.active; if(metric==='span')return s.span; return s.turn!=null?s.turn:s.active; }
+
+function filtered(){
+  let cut=0;
+  if(range!=='all'){ const days=+range; const maxT=Math.max(...S0.map(s=>+new Date(s.start))); cut=maxT-days*864e5; }
+  return S0.filter(s=>
+    selProj.has(s.project) &&
+    (range==='all' || +new Date(s.start)>=cut) &&
+    (!model || s.primaryModel===model)
+  );
+}
+
+// ---------- charts registry ----------
+const charts={};
+function mk(id){ const c=echarts.init($('#'+id),null,{renderer:'canvas'}); charts[id]=c; return c; }
+const baseGrid={left:48,right:18,top:24,bottom:34};
+const axisStyle={axisLine:{lineStyle:{color:'#e6e6ee'}},axisTick:{show:false},
+  axisLabel:{color:'#9a9aa8',fontSize:11},splitLine:{lineStyle:{color:'#f3f3f7'}}};
+const TT={backgroundColor:'#fff',borderColor:'#ececf2',borderWidth:1,textStyle:{color:'#16161d',fontSize:12},
+  extraCssText:'box-shadow:0 6px 22px rgba(20,20,40,.10);border-radius:10px;padding:9px 12px;'};
+
+['trend','heat','hist','cal','proj','scatter','turnhist','models',
+ 'tooltree','net','filetree','bash','throughput','tokens',
+ 'skills','domains','themes','churn','hotspots','cost'].forEach(mk);
+
+// ---------- renderers ----------
+function renderKPIs(F){
+  const durs=F.map(metricVal);
+  const days=new Set(); F.forEach(s=>Object.keys(s.cal).forEach(d=>days.add(d)));
+  const outTok=F.reduce((a,s)=>a+s.tokensOut+s.subTokensOut,0);
+  const totalMs=durs.reduce((a,b)=>a+b,0);
+  const toolCalls=F.reduce((a,s)=>a+Object.values(s.toolCounts).reduce((x,y)=>x+y,0),0);
+  const subs=F.reduce((a,s)=>a+s.nSubagents,0);
+  let cr=0,cc=0,inp=0; F.forEach(s=>{cr+=s.cacheRead+s.subCacheRead;cc+=s.cacheCreate+s.subCacheCreate;inp+=s.tokensIn+s.subTokensIn;});
+  const hit=cr+cc+inp>0? (100*cr/(cr+cc+inp)) : 0;
+  const think=F.reduce((a,s)=>a+s.nThinking,0);
+  const cost=F.reduce((a,s)=>a+sessionCost(s),0), saved=F.reduce((a,s)=>a+cacheSaved(s),0);
+  const wl=F.reduce((a,s)=>a+s.writeLines,0), la=F.reduce((a,s)=>a+s.locAdd,0);
+  const cards=[
+    ['Sessions', F.length, range==='all'?'all time':'last '+range+'d'],
+    ['Total '+metricLabel(), hrs(totalMs), 'across '+days.size+' active days'],
+    ['Median session', fmtDur(median(durs)), 'p90 '+fmtDur(pct(durs,90))],
+    ['Longest session', fmtDur(Math.max(0,...durs)), 'single session'],
+    ['Est. cost', fmtUSD(cost), 'list price · '+fmtUSD(saved)+' saved by cache'],
+    ['Lines written', fmtNum(wl), '+'+fmtNum(la)+' edited (net)'],
+    ['Output tokens', fmtNum(outTok), 'incl. subagents'],
+    ['Tool calls', fmtNum(toolCalls), subs+' subagents spawned'],
+    ['Cache hit rate', hit.toFixed(1)+'<small>%</small>', fmtNum(cr)+' tok from cache'],
+    ['Thinking blocks', fmtNum(think), 'extended reasoning'],
+  ];
+  $('#kpis').innerHTML=cards.map(c=>`<div class="kpi"><div class="lab">${c[0]}</div><div class="val">${c[1]}</div><div class="hint">${c[2]}</div></div>`).join('');
+}
+function hrs(ms){const h=ms/36e5; return h<10? `${h.toFixed(1)}<small>h</small>`:`${Math.round(h)}<small>h</small>`;}
+function pct(a,p){ if(!a.length)return 0; const b=[...a].sort((x,y)=>x-y); return b[Math.min(b.length-1,Math.floor(p/100*b.length))]; }
+function metricLabel(){ return metric==='active'?'active time':metric==='turn'?'turn time':'calendar span'; }
+
+function renderTrend(F){
+  const by={}; F.forEach(s=>{ const d=s.date; by[d]=(by[d]||0)+metricVal(s); });
+  let dates=Object.keys(by).sort();
+  if(dates.length){ // fill gaps for continuous axis
+    const out=[]; let d=new Date(dates[0]); const end=new Date(dates[dates.length-1]);
+    while(d<=end){ const k=d.toISOString().slice(0,10); out.push(k); d.setDate(d.getDate()+1);} dates=out;
+  }
+  const vals=dates.map(d=>+( (by[d]||0)/36e5).toFixed(3));
+  // 7-day moving avg
+  const ma=vals.map((_,i)=>{ let s=0,n=0; for(let j=Math.max(0,i-6);j<=i;j++){s+=vals[j];n++;} return +(s/n).toFixed(3); });
+  charts.trend.setOption({
+    tooltip:{trigger:'axis',...TT,valueFormatter:v=>v.toFixed(2)+' h'},
+    grid:{...baseGrid,bottom:40},
+    xAxis:{type:'category',data:dates,...axisStyle,axisLabel:{color:'#9a9aa8',fontSize:10,formatter:v=>v.slice(5)},boundaryGap:true},
+    yAxis:{type:'value',name:'hours',nameTextStyle:{color:'#b6b6c2',fontSize:10},...axisStyle},
+    series:[
+      {type:'bar',data:vals,itemStyle:{color:'#c7cbf5',borderRadius:[3,3,0,0]},barMaxWidth:22,name:'daily'},
+      {type:'line',data:ma,smooth:true,symbol:'none',lineStyle:{color:'#4f46e5',width:2.5},name:'7-day avg',z:3}
+    ]
+  },true);
+}
+
+function renderHeat(F){
+  const M=Array.from({length:7},()=>Array(24).fill(0));
+  F.forEach(s=>{ for(const k in s.hd){ const [d,h]=k.split('_').map(Number); M[d][h]+=s.hd[k]; } });
+  const data=[]; let mx=0;
+  for(let d=0;d<7;d++)for(let h=0;h<24;h++){ const v=M[d][h]/3600; if(v>0)data.push([h,d,+v.toFixed(3)]); if(v>mx)mx=v; }
+  charts.heat.setOption({
+    tooltip:{...TT,formatter:p=>`${DOW[p.value[1]]} ${String(p.value[0]).padStart(2,'0')}:00<br><b>${fmtDur(p.value[2]*36e5)}</b> active`},
+    grid:{left:42,right:14,top:12,bottom:54},
+    xAxis:{type:'category',data:[...Array(24).keys()],...axisStyle,axisLabel:{color:'#9a9aa8',fontSize:9,interval:1,formatter:v=>v%2?'':v},splitLine:{show:false}},
+    yAxis:{type:'category',data:DOW,...axisStyle,splitLine:{show:false}},
+    visualMap:{min:0,max:mx||1,calculable:false,orient:'horizontal',left:'center',bottom:6,itemWidth:11,itemHeight:120,
+      text:['more',''],textStyle:{color:'#9a9aa8',fontSize:10},inRange:{color:['#f3f4ff','#c7d2fe','#818cf8','#4338ca']}},
+    series:[{type:'heatmap',data,itemStyle:{borderColor:'#fff',borderWidth:1.5},
+      emphasis:{itemStyle:{borderColor:'#16161d',borderWidth:1}}}]
+  },true);
+}
+
+function renderHist(F){
+  const edges=[0,1,2,5,10,20,30,60,120,240,99999];
+  const labs=['<1m','1-2m','2-5m','5-10m','10-20m','20-30m','30-60m','1-2h','2-4h','4h+'];
+  const cnt=Array(labs.length).fill(0);
+  F.forEach(s=>{ const m=metricVal(s)/60000; for(let i=0;i<edges.length-1;i++){ if(m>=edges[i]&&m<edges[i+1]){cnt[i]++;break;} } });
+  charts.hist.setOption({
+    tooltip:{trigger:'axis',...TT,formatter:p=>`${p[0].name}<br><b>${p[0].value}</b> session${p[0].value==1?'':'s'}`},
+    grid:{...baseGrid,bottom:40},
+    xAxis:{type:'category',data:labs,...axisStyle,axisLabel:{color:'#9a9aa8',fontSize:10,interval:0,rotate:0}},
+    yAxis:{type:'value',...axisStyle},
+    series:[{type:'bar',data:cnt,itemStyle:{color:'#4f46e5',borderRadius:[4,4,0,0]},barMaxWidth:30,
+      label:{show:true,position:'top',color:'#9a9aa8',fontSize:10}}]
+  },true);
+}
+
+function renderCal(F){
+  const by={}; F.forEach(s=>{ for(const d in s.cal) by[d]=(by[d]||0)+s.cal[d]; });
+  const dates=Object.keys(by).sort();
+  const data=dates.map(d=>[d,+(by[d]/3600).toFixed(3)]);
+  const calRange=dates.length? [dates[0], dates[dates.length-1]] : '2026';
+  const mx=Math.max(0.1,...data.map(d=>d[1]));
+  charts.cal.setOption({
+    tooltip:{...TT,formatter:p=>`${p.value[0]}<br><b>${fmtDur(p.value[1]*36e5)}</b> active`},
+    visualMap:{min:0,max:mx,calculable:false,orient:'horizontal',right:10,top:0,itemWidth:11,itemHeight:90,
+      text:['','less'],textStyle:{color:'#9a9aa8',fontSize:10},inRange:{color:['#f3f4ff','#c7d2fe','#818cf8','#4338ca']}},
+    calendar:{top:34,left:34,right:18,cellSize:['auto',16],range:calRange,
+      itemStyle:{color:'#fafafb',borderColor:'#fff',borderWidth:2},
+      splitLine:{show:false},
+      yearLabel:{show:false},
+      monthLabel:{color:'#9a9aa8',fontSize:11,nameMap:'en'},
+      dayLabel:{color:'#c2c2cc',fontSize:10,firstDay:1,nameMap:['S','M','T','W','T','F','S']}},
+    series:[{type:'heatmap',coordinateSystem:'calendar',data,itemStyle:{borderRadius:3}}]
+  },true);
+}
+
+function renderProj(F){
+  const by={}; F.forEach(s=>{ by[s.project]=by[s.project]||{ms:0,n:0}; by[s.project].ms+=metricVal(s); by[s.project].n++; });
+  const arr=Object.entries(by).map(([p,v])=>({p,...v})).sort((a,b)=>a.ms-b.ms);
+  charts.proj.setOption({
+    tooltip:{trigger:'axis',axisPointer:{type:'none'},...TT,formatter:p=>`${p[0].name}<br><b>${fmtDur(p[0].value*36e5)}</b> · ${(by[p[0].name]||{n:0}).n} sessions`},
+    grid:{left:8,right:60,top:8,bottom:24,containLabel:true},
+    xAxis:{type:'value',...axisStyle,axisLabel:{color:'#9a9aa8',fontSize:10,formatter:v=>v+'h'}},
+    yAxis:{type:'category',data:arr.map(a=>a.p),...axisStyle,axisLabel:{color:'#5a5a68',fontSize:11},axisLine:{show:false}},
+    series:[{type:'bar',data:arr.map(a=>({value:+(a.ms/36e5).toFixed(2),itemStyle:{color:projColor[a.p],borderRadius:[0,4,4,0]}})),
+      barMaxWidth:18,label:{show:true,position:'right',color:'#9a9aa8',fontSize:10,
+        formatter:p=>arr[p.dataIndex].n+'×'}}]
+  },true);
+}
+
+function renderScatter(F){
+  const groups={};
+  F.forEach(s=>{ (groups[s.project]=groups[s.project]||[]).push([metricVal(s)/60000, s.tokensOut+s.subTokensOut, s.nToolUse, s.id, s.project]); });
+  const series=Object.entries(groups).map(([p,d])=>({
+    name:p,type:'scatter',data:d,
+    symbolSize:v=>Math.max(7,Math.min(34,6+Math.sqrt(v[2])*2.4)),
+    itemStyle:{color:projColor[p],opacity:.72,borderColor:'#fff',borderWidth:1}
+  }));
+  charts.scatter.setOption({
+    tooltip:{...TT,formatter:p=>`<b>${p.value[4]}</b> · ${p.value[3]}<br>${fmtDur(p.value[0]*6e4)} · ${fmtNum(p.value[1])} out tok · ${p.value[2]} tools`},
+    grid:{left:50,right:18,top:12,bottom:42},
+    xAxis:{type:'value',name:'minutes',nameTextStyle:{color:'#b6b6c2',fontSize:10},nameGap:24,nameLocation:'middle',...axisStyle},
+    yAxis:{type:'value',name:'out tokens',nameTextStyle:{color:'#b6b6c2',fontSize:10},...axisStyle,axisLabel:{color:'#9a9aa8',fontSize:10,formatter:fmtNum}},
+    series
+  },true);
+}
+
+function renderTurnHist(F){
+  const all=[]; F.forEach(s=>{ if(!s.estimated) s.turns.forEach(t=>all.push(t/60000)); });
+  const edges=[0,.5,1,2,3,5,10,20,30,60,99999];
+  const labs=['<30s','.5-1m','1-2m','2-3m','3-5m','5-10m','10-20m','20-30m','30-60m','60m+'];
+  const cnt=Array(labs.length).fill(0);
+  all.forEach(m=>{ for(let i=0;i<edges.length-1;i++){ if(m>=edges[i]&&m<edges[i+1]){cnt[i]++;break;} } });
+  charts.turnhist.setOption({
+    tooltip:{trigger:'axis',...TT,formatter:p=>`${p[0].name}<br><b>${p[0].value}</b> turns`},
+    grid:{...baseGrid,bottom:40},
+    xAxis:{type:'category',data:labs,...axisStyle,axisLabel:{color:'#9a9aa8',fontSize:9.5,interval:0}},
+    yAxis:{type:'value',...axisStyle},
+    series:[{type:'bar',data:cnt,itemStyle:{color:'#0ea5e9',borderRadius:[4,4,0,0]},barMaxWidth:26}]
+  },true);
+}
+
+function renderModels(F){
+  const by={}; F.forEach(s=>{ const m=s.primaryModel||'unknown'; by[m]=(by[m]||0)+s.active; });
+  const arr=Object.entries(by).map(([m,v],i)=>({name:m.replace('claude-','').replace('google/',''),value:+(v/36e5).toFixed(2)})).sort((a,b)=>b.value-a.value);
+  charts.models.setOption({
+    tooltip:{...TT,formatter:p=>`<b>${p.name}</b><br>${p.value} h · ${p.percent}%`},
+    legend:{bottom:0,icon:'circle',textStyle:{color:'#6a6a78',fontSize:11},itemWidth:9,itemHeight:9},
+    series:[{type:'pie',radius:['46%','70%'],center:['50%','44%'],avoidLabelOverlap:true,
+      itemStyle:{borderColor:'#fff',borderWidth:3},
+      color:['#4f46e5','#818cf8','#0ea5e9','#10b981','#f59e0b','#ec4899'],
+      label:{show:false},data:arr}]
+  },true);
+}
+
+function renderTooltree(F){
+  const data=treeData(aggCounts(F,'toolCounts'),toolCat,shortTool);
+  charts.tooltree.setOption({
+    tooltip:{...TT,formatter:p=>`${p.name}<br><b>${fmtNum(p.value)}</b> calls`},
+    series:[{type:'treemap',data,roam:false,nodeClick:false,breadcrumb:{show:false},
+      width:'100%',height:'100%',top:6,left:2,right:2,bottom:2,
+      label:{color:'#fff',fontSize:12,fontWeight:600,formatter:p=>p.name+'\n'+fmtNum(p.value)},
+      upperLabel:{show:true,height:22,color:'#fff',fontSize:11.5,fontWeight:700},
+      itemStyle:{borderColor:'#fff',borderWidth:2,gapWidth:2},
+      levels:[{itemStyle:{borderWidth:0,gapWidth:3,borderColor:'#fff'}},
+              {colorSaturation:[0.32,0.6],itemStyle:{gapWidth:1,borderColorSaturation:0.6}}]
+    }]
+  },true);
+}
+function renderFiletree(F){
+  const data=treeData(aggCounts(F,'extCounts'),extCat,null);
+  charts.filetree.setOption({
+    tooltip:{...TT,formatter:p=>`.${p.name}<br><b>${fmtNum(p.value)}</b> ops`},
+    series:[{type:'treemap',data,roam:false,nodeClick:false,breadcrumb:{show:false},
+      width:'100%',height:'100%',top:6,left:2,right:2,bottom:2,
+      label:{color:'#fff',fontSize:12,fontWeight:600,formatter:p=>'.'+p.name},
+      upperLabel:{show:true,height:22,color:'#fff',fontSize:11.5,fontWeight:700},
+      itemStyle:{borderColor:'#fff',borderWidth:2,gapWidth:2},
+      levels:[{itemStyle:{borderWidth:0,gapWidth:3}},
+              {colorSaturation:[0.32,0.6],itemStyle:{gapWidth:1}}]
+    }]
+  },true);
+}
+function renderNet(F){
+  const tc=aggCounts(F,'toolCounts'), tr=aggCounts(F,'trans');
+  const nodes=DATA.topTools.filter(t=>tc[t]).map(t=>({name:t,value:tc[t],
+    symbolSize:Math.max(12,Math.min(58,Math.sqrt(tc[t])*0.85)),
+    itemStyle:{color:CATCOLOR[toolCat(t)]||'#94a3b8'}}));
+  const names=new Set(nodes.map(n=>n.name));
+  let edges=Object.entries(tr).map(([k,v])=>{const a=k.split('>');return {source:a[0],target:a[1],value:v};})
+    .filter(e=>names.has(e.source)&&names.has(e.target));
+  const mx=Math.max(1,...edges.map(e=>e.value));
+  edges=edges.filter(e=>e.value>=Math.max(6,mx*0.05)).map(e=>({source:e.source,target:e.target,value:e.value,
+    lineStyle:{width:Math.max(1,e.value/mx*9),opacity:.42,curveness:.2,color:'source'},
+    symbol:['none','arrow'],symbolSize:[0,5]}));
+  charts.net.setOption({
+    tooltip:{...TT,formatter:p=>p.dataType==='edge'?`${p.data.source} → ${p.data.target}<br><b>${fmtNum(p.value)}</b> times`:`<b>${p.name}</b><br>${fmtNum(p.value)} calls`},
+    series:[{type:'graph',layout:'circular',circular:{rotateLabel:false},data:nodes,edges,roam:false,
+      center:['50%','52%'],zoom:0.82,
+      label:{show:true,color:'#3a3a48',fontSize:11,fontWeight:560,position:'right',distance:4},
+      lineStyle:{color:'source'},
+      emphasis:{focus:'adjacency',label:{color:'#16161d'},lineStyle:{opacity:.85}}}]
+  },true);
+}
+function renderBash(F){
+  const c=aggCounts(F,'bashCounts');
+  const arr=Object.entries(c).sort((a,b)=>b[1]-a[1]).slice(0,16).reverse();
+  charts.bash.setOption({
+    tooltip:{trigger:'axis',axisPointer:{type:'none'},...TT,formatter:p=>`<code>${p[0].name}</code><br><b>${fmtNum(p[0].value)}</b> calls`},
+    grid:{left:8,right:46,top:8,bottom:22,containLabel:true},
+    xAxis:{type:'value',...axisStyle,axisLabel:{color:'#9a9aa8',fontSize:10,formatter:fmtNum}},
+    yAxis:{type:'category',data:arr.map(a=>a[0]),...axisStyle,axisLine:{show:false},
+      axisLabel:{color:'#5a5a68',fontSize:11,fontFamily:'ui-monospace,Menlo,monospace'}},
+    series:[{type:'bar',data:arr.map(a=>a[1]),barMaxWidth:15,
+      itemStyle:{color:'#4f46e5',borderRadius:[0,4,4,0]},
+      label:{show:true,position:'right',color:'#9a9aa8',fontSize:10,formatter:p=>fmtNum(p.value)}}]
+  },true);
+}
+function renderThroughput(F){
+  const by={}; F.forEach(s=>{ by[s.project]=by[s.project]||{out:0,h:0};
+    by[s.project].out+=s.tokensOut+s.subTokensOut; by[s.project].h+=s.active/36e5; });
+  const arr=Object.entries(by).filter(([p,v])=>v.h>0.05).map(([p,v])=>({p,rate:v.out/v.h}))
+    .sort((a,b)=>a.rate-b.rate);
+  charts.throughput.setOption({
+    tooltip:{trigger:'axis',axisPointer:{type:'none'},...TT,formatter:p=>`${p[0].name}<br><b>${fmtNum(p[0].value)}</b> out tok / active hr`},
+    grid:{left:8,right:54,top:8,bottom:24,containLabel:true},
+    xAxis:{type:'value',...axisStyle,axisLabel:{color:'#9a9aa8',fontSize:10,formatter:fmtNum}},
+    yAxis:{type:'category',data:arr.map(a=>a.p),...axisStyle,axisLine:{show:false},axisLabel:{color:'#5a5a68',fontSize:11}},
+    series:[{type:'bar',data:arr.map(a=>({value:Math.round(a.rate),itemStyle:{color:projColor[a.p],borderRadius:[0,4,4,0]}})),
+      barMaxWidth:16,label:{show:true,position:'right',color:'#9a9aa8',fontSize:10,formatter:p=>fmtNum(p.value)}}]
+  },true);
+}
+function renderTokens(F){
+  let inp=0,cc=0,cr=0,out=0;
+  F.forEach(s=>{inp+=s.tokensIn+s.subTokensIn;cc+=s.cacheCreate+s.subCacheCreate;cr+=s.cacheRead+s.subCacheRead;out+=s.tokensOut+s.subTokensOut;});
+  const hit=cr+cc+inp>0?(100*cr/(cr+cc+inp)):0;
+  $('#cacheTag').textContent=hit.toFixed(1)+'% cache hit';
+  const rows=[['Fresh input',inp,'#94a3b8'],['Cache writes',cc,'#f59e0b'],['Output',out,'#10b981'],['Cache reads',cr,'#4f46e5']];
+  charts.tokens.setOption({
+    tooltip:{trigger:'axis',axisPointer:{type:'none'},...TT,formatter:p=>`${p[0].name}<br><b>${fmtNum(p[0].value)}</b> tokens`},
+    grid:{left:8,right:60,top:6,bottom:20,containLabel:true},
+    xAxis:{type:'value',...axisStyle,axisLabel:{color:'#9a9aa8',fontSize:10,formatter:fmtNum}},
+    yAxis:{type:'category',data:rows.map(r=>r[0]),...axisStyle,axisLine:{show:false},axisLabel:{color:'#5a5a68',fontSize:11.5}},
+    series:[{type:'bar',data:rows.map(r=>({value:r[1],itemStyle:{color:r[2],borderRadius:[0,5,5,0]}})),barMaxWidth:26,
+      label:{show:true,position:'right',color:'#6a6a78',fontSize:11,fontWeight:600,formatter:p=>fmtNum(p.value)}}]
+  },true);
+}
+
+function hbar(id,pairs,color,fmt,mono){
+  const arr=[...pairs].reverse();
+  charts[id].setOption({
+    tooltip:{trigger:'axis',axisPointer:{type:'none'},...TT,formatter:p=>`${p[0].name}<br><b>${(fmt||fmtNum)(p[0].value)}</b>`},
+    grid:{left:8,right:52,top:8,bottom:22,containLabel:true},
+    xAxis:{type:'value',...axisStyle,axisLabel:{color:'#9a9aa8',fontSize:10,formatter:fmt||fmtNum}},
+    yAxis:{type:'category',data:arr.map(a=>a[0]),...axisStyle,axisLine:{show:false},
+      axisLabel:{color:'#5a5a68',fontSize:11,fontFamily:mono?'ui-monospace,Menlo,monospace':'inherit'}},
+    series:[{type:'bar',data:arr.map((a,i)=>({value:a[1],itemStyle:{color:typeof color==='function'?color(a,i):color,borderRadius:[0,4,4,0]}})),
+      barMaxWidth:15,label:{show:true,position:'right',color:'#9a9aa8',fontSize:10,formatter:p=>(fmt||fmtNum)(p.value)}}]
+  },true);
+}
+function renderSkills(F){
+  const c=aggCounts(F,'skills');
+  const arr=Object.entries(c).sort((a,b)=>b[1]-a[1]).slice(0,12).map(([k,v])=>[cleanSkill(k),v]);
+  hbar('skills',arr,(a)=>a[0].startsWith('spec:')?'#f59e0b':a[0]==='deep-research'?'#4f46e5':a[0]==='kb'?'#0ea5e9':'#8b5cf6');
+}
+function renderDomains(F){
+  const c=aggCounts(F,'domains');
+  hbar('domains',Object.entries(c).sort((a,b)=>b[1]-a[1]).slice(0,12),'#10b981',null,true);
+}
+function renderThemes(F){
+  const c=aggCounts(F,'searchKw');
+  const data=Object.entries(c).sort((a,b)=>b[1]-a[1]).slice(0,40).map(([k,v])=>({name:k,value:v}));
+  const mx=Math.max(1,...data.map(d=>d.value));
+  charts.themes.setOption({
+    tooltip:{...TT,formatter:p=>`${p.name}<br><b>${fmtNum(p.value)}</b> searches`},
+    series:[{type:'treemap',data,roam:false,nodeClick:false,breadcrumb:{show:false},
+      width:'100%',height:'100%',top:4,left:2,right:2,bottom:2,
+      label:{color:'#fff',fontSize:12,fontWeight:600},
+      itemStyle:{borderColor:'#fff',borderWidth:2,gapWidth:2},
+      levels:[{color:['#4338ca','#4f46e5','#6366f1','#818cf8','#a5b4fc'],
+        colorMappingBy:'value',itemStyle:{gapWidth:2}}]}]
+  },true);
+}
+function renderChurn(F){
+  const by={}; F.forEach(s=>{ by[s.project]=by[s.project]||{a:0,d:0}; by[s.project].a+=s.locAdd; by[s.project].d+=s.locDel; });
+  const arr=Object.entries(by).map(([p,v])=>({p,...v})).filter(a=>a.a+a.d>0)
+    .sort((x,y)=>(x.a+x.d)-(y.a+y.d)).slice(-12);
+  charts.churn.setOption({
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'},...TT,
+      formatter:p=>`${p[0].name}<br>+${fmtNum(p[0].value)} added<br>−${fmtNum(Math.abs(p[1].value))} removed`},
+    legend:{show:false},
+    grid:{left:8,right:48,top:8,bottom:22,containLabel:true},
+    xAxis:{type:'value',...axisStyle,axisLabel:{color:'#9a9aa8',fontSize:10,formatter:v=>fmtNum(Math.abs(v))}},
+    yAxis:{type:'category',data:arr.map(a=>a.p),...axisStyle,axisLine:{show:false},axisLabel:{color:'#5a5a68',fontSize:11}},
+    series:[
+      {name:'added',type:'bar',stack:'t',data:arr.map(a=>a.a),itemStyle:{color:'#16a34a',borderRadius:[0,3,3,0]},barMaxWidth:15},
+      {name:'removed',type:'bar',stack:'t',data:arr.map(a=>-a.d),itemStyle:{color:'#ef4444',borderRadius:[3,0,0,3]},barMaxWidth:15}
+    ]
+  },true);
+}
+function renderHotspots(F){
+  const c=aggCounts(F,'files');
+  const data=Object.entries(c).sort((a,b)=>b[1]-a[1]).slice(0,42).map(([path,v])=>{
+    const base=path.split('/').pop(); const e=(base.match(/\.([a-z0-9]+)$/i)||[])[1];
+    return {name:base,value:v,path:path,itemStyle:{color:CATCOLOR[extCat((e||'').toLowerCase())]||'#94a3b8'}};
+  });
+  charts.hotspots.setOption({
+    tooltip:{...TT,formatter:p=>`${(p.data&&p.data.path)||p.name}<br><b>${fmtNum(p.value)}</b> touches`},
+    series:[{type:'treemap',data,roam:false,nodeClick:false,breadcrumb:{show:false},
+      width:'100%',height:'100%',top:4,left:2,right:2,bottom:2,
+      label:{color:'#fff',fontSize:10.5,fontWeight:600,overflow:'truncate'},
+      itemStyle:{borderColor:'#fff',borderWidth:2,gapWidth:2},
+      levels:[{colorSaturation:[0.4,0.6],itemStyle:{gapWidth:2}}]}]
+  },true);
+}
+function renderCost(F){
+  const by={}; F.forEach(s=>{ by[s.project]=(by[s.project]||0)+sessionCost(s); });
+  const arr=Object.entries(by).filter(([p,v])=>v>0.005).sort((a,b)=>a[1]-b[1]);
+  const total=F.reduce((a,s)=>a+sessionCost(s),0), saved=F.reduce((a,s)=>a+cacheSaved(s),0);
+  $('#costTag').textContent=fmtUSD(total)+' · '+fmtUSD(saved)+' saved by cache';
+  charts.cost.setOption({
+    tooltip:{trigger:'axis',axisPointer:{type:'none'},...TT,formatter:p=>`${p[0].name}<br><b>${fmtUSD(p[0].value)}</b>`},
+    grid:{left:8,right:60,top:8,bottom:24,containLabel:true},
+    xAxis:{type:'value',...axisStyle,axisLabel:{color:'#9a9aa8',fontSize:10,formatter:v=>'$'+fmtNum(v)}},
+    yAxis:{type:'category',data:arr.map(a=>a[0]),...axisStyle,axisLine:{show:false},axisLabel:{color:'#5a5a68',fontSize:11}},
+    series:[{type:'bar',data:arr.map(a=>({value:+a[1].toFixed(2),itemStyle:{color:projColor[a[0]],borderRadius:[0,4,4,0]}})),
+      barMaxWidth:16,label:{show:true,position:'right',color:'#9a9aa8',fontSize:10,formatter:p=>fmtUSD(p.value)}}]
+  },true);
+}
+
+// ---------- table ----------
+const COLS=[
+  ['project','Project','proj'],['date','Date','mut'],['active','Active','dur'],['turn','Turn','dur'],
+  ['span','Span','dur'],['nTurns','Turns','n'],['nToolUse','Tools','n'],['nSubagents','Subagents','n'],
+  ['tokensOut','Out tok','tok'],['primaryModel','Model','mod']
+];
+function renderTable(F){
+  const th=$('#tbl thead'), tb=$('#tbl tbody');
+  th.innerHTML='<tr>'+COLS.map(c=>`<th data-k="${c[0]}">${c[1]}${sortKey===c[0]?(sortDir<0?' ↓':' ↑'):''}</th>`).join('')+'</tr>';
+  th.querySelectorAll('th').forEach(h=>h.onclick=()=>{ const k=h.dataset.k; if(sortKey===k)sortDir*=-1; else{sortKey=k;sortDir=-1;} renderTable(filtered()); });
+  const rows=[...F].sort((a,b)=>{ let x=a[sortKey],y=b[sortKey]; if(x==null)x=-1; if(y==null)y=-1;
+    if(typeof x==='string')return sortDir*x.localeCompare(y); return sortDir*(x-y); });
+  tb.innerHTML=rows.map(s=>{
+    const c=projColor[s.project];
+    return `<tr>
+      <td class="proj"><span class="dot" style="background:${c}"></span>${s.project}${s.estimated?'<span class="est">est</span>':''}</td>
+      <td class="mut">${s.date}</td>
+      <td>${fmtDur(s.active)}</td>
+      <td>${fmtDur(s.turn)}</td>
+      <td class="mut">${fmtDur(s.span)}</td>
+      <td>${s.nTurns||'–'}</td>
+      <td>${s.nToolUse}</td>
+      <td class="mut">${s.nSubagents||'–'}</td>
+      <td>${fmtNum(s.tokensOut+s.subTokensOut)}</td>
+      <td class="mut">${(s.primaryModel||'–').replace('claude-','').replace('google/','')}</td>
+    </tr>`; }).join('');
+  $('#cntTag').textContent=F.length+' shown';
+}
+
+// ---------- orchestrate ----------
+function tagText(){ return metric==='active'?'active':metric==='turn'?'turn':'span'; }
+function renderAll(){
+  const F=filtered();
+  $('#trendTag').textContent=metricLabel()+' / day';
+  $('#histTag').textContent=tagText();
+  $('#projTag').textContent=tagText();
+  $('#scatTag').textContent=tagText();
+  renderKPIs(F); renderTrend(F); renderHeat(F); renderHist(F); renderCal(F);
+  renderProj(F); renderScatter(F); renderTurnHist(F); renderModels(F);
+  renderTooltree(F); renderFiletree(F); renderNet(F); renderBash(F); renderThroughput(F); renderTokens(F);
+  renderSkills(F); renderDomains(F); renderThemes(F); renderChurn(F); renderHotspots(F); renderCost(F);
+  renderTable(F);
+}
+
+// ---------- controls ----------
+function initControls(){
+  $('#gen').innerHTML=`<b>${DATA.nSessions}</b> sessions analysed<br>generated ${new Date(DATA.generatedAt).toLocaleString()}`;
+  $('#capLab').textContent=DATA.idleCapSec+'s';
+  $('#turnCntLab').textContent=S0.filter(s=>!s.estimated).length;
+  // models
+  const ms=[...new Set(S0.map(s=>s.primaryModel).filter(Boolean))].sort();
+  $('#modelSel').innerHTML='<option value="">All models</option>'+ms.map(m=>`<option value="${m}">${m.replace('claude-','')}</option>`).join('');
+  $('#modelSel').onchange=e=>{ model=e.target.value; renderAll(); };
+  // project chips
+  $('#projChips').innerHTML=projects.map(p=>`<span class="chip on" data-p="${p}"><span class="dot" style="background:${projColor[p]}"></span>${p}</span>`).join('');
+  $('#projChips').querySelectorAll('.chip').forEach(ch=>ch.onclick=()=>{
+    const p=ch.dataset.p;
+    // shift-less toggle; if all selected and you click one -> isolate it; click again -> all
+    if(selProj.size===projects.length){ selProj=new Set([p]); }
+    else if(selProj.has(p)){ selProj.delete(p); if(selProj.size===0)selProj=new Set(projects); }
+    else selProj.add(p);
+    syncChips(); renderAll();
+  });
+  // metric seg
+  $('#metricSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{
+    metric=b.dataset.m; segOn('#metricSeg',b); renderAll(); });
+  $('#rangeSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{
+    range=b.dataset.r; segOn('#rangeSeg',b); renderAll(); });
+  $('#resetBtn').onclick=()=>{ metric='active';range='all';model='';selProj=new Set(projects);
+    $('#modelSel').value=''; segReset(); syncChips(); renderAll(); };
+}
+function segOn(sel,btn){ document.querySelectorAll(sel+' button').forEach(x=>x.classList.toggle('on',x===btn)); }
+function segReset(){ $('#metricSeg button[data-m=active]').click? null:null;
+  document.querySelectorAll('#metricSeg button').forEach(x=>x.classList.toggle('on',x.dataset.m==='active'));
+  document.querySelectorAll('#rangeSeg button').forEach(x=>x.classList.toggle('on',x.dataset.r==='all')); }
+function syncChips(){ document.querySelectorAll('#projChips .chip').forEach(ch=>
+  ch.classList.toggle('on', selProj.size===projects.length || selProj.has(ch.dataset.p))); }
+
+initControls();
+renderAll();
+window.addEventListener('resize',()=>Object.values(charts).forEach(c=>c.resize()));
+</script>
+</body>
+</html>

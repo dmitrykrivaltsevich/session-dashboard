@@ -1,1 +1,9 @@
-dashboard.html
+# Generated, machine-specific output (contains your local file paths) — rebuild with `make data`
+data.js
+
+# Python
+__pycache__/
+*.pyc
+
+# OS / editor
+.DS_Store
