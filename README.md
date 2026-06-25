@@ -49,9 +49,37 @@ distribution, project breakdown, scatter, table).
 - **File-type footprint** — treemap of file extensions read/written/edited
 - **Shell commands** — frequency of the first verb of every `Bash` call
 - **Throughput** — output tokens produced per active hour, by project
-- **Token economics** — input vs cache-write vs cache-read vs output (the prompt cache served **94.6%** of input tokens)
+- **Token economics** — input vs cache-write vs cache-read vs output (the prompt cache serves ~95% of input tokens)
+
+**What I work on, make & spend**
+- **Skills & power-features** — invocations of deep-research, the speckit SDD suite, kb, drive (how you actually drive Claude)
+- **Research footprint** — top web domains fetched
+- **Search themes** — word-cloud treemap of every `WebSearch` query term
+- **Output ledger** — lines added/removed per project (Edit churn)
+- **Codebase hotspots** — treemap of the most-touched files
+- **Estimated cost** — per-project spend, plus "$ saved by the cache" (see Cost below)
 
 - **Sessions table** — sortable, reflects all filters
+
+## Cost estimation
+
+Cost is an **estimate at current public list prices** (you may pay differently on a
+subscription/Max plan). It is computed **per model** and **per token class**, because
+mispricing the cache swings the total several-fold:
+
+| Token class | Rate (× model input price) |
+|---|---|
+| Input | 1× |
+| Output | model output price |
+| Cache **read** | 0.1× |
+| Cache **write**, 5-min TTL | 1.25× |
+| Cache **write**, 1-hour TTL | 2× |
+
+Per-model rates ($/1M tokens) live in `data.js` under `pricing` (Opus 4.8 $5/$25,
+Opus 4.7 $5/$25, Fable 5 $10/$50, Haiku 4.5 $1/$5, Sonnet 4.6 $3/$15). Local /
+non-Anthropic models (e.g. `google/gemma-*`) are priced at $0. "Saved by cache" =
+what the cache-read tokens *would* have cost at full input price minus what they
+actually cost at 0.1×.
 
 ## Filters
 
