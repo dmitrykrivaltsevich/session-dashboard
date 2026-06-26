@@ -9,92 +9,190 @@
 if (typeof echarts === 'undefined')
   document.write('<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"><\/script>');</script>
 <script src="data.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#ffffff; --panel:#ffffff; --ink:#16161d; --muted:#8a8a99;
-    --line:#ededf2; --line2:#f4f4f7; --accent:#4f46e5; --accent-soft:#eef0fe;
-    --heat0:#f3f4ff; --heat1:#4338ca; --pos:#16a34a; --shadow:0 1px 2px rgba(20,20,40,.04),0 8px 24px rgba(20,20,40,.04);
-    --radius:16px;
+    --bg:#F4F6F8; --panel:#FFFFFF; --surface:#FFFFFF; --ink:#111827; --ink-soft:#3A4452; --muted:#6B7280;
+    --line:#E5E8EC; --line2:#EEF1F4; --accent:#0E7C7B; --accent-soft:#E6F2F1; --accent2:#0F4C81;
+    --hot:#D98324; --heat0:#EAF1F1; --heat1:#0E7C7B; --pos:#138A5E; --warn:#B7791F; --danger:#C0392B;
+    --shadow:0 1px 2px rgba(16,24,40,.04); --hl:0 1px 2px rgba(16,24,40,.04); --radius:7px;
+    --disp:"Archivo",system-ui,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
   }
   *{box-sizing:border-box}
   html,body{margin:0;background:var(--bg);color:var(--ink);
-    font-family:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    -webkit-font-smoothing:antialiased;font-feature-settings:"tnum" 1,"cv01" 1;}
+    font-family:"Archivo",system-ui,-apple-system,sans-serif;
+    -webkit-font-smoothing:antialiased;font-feature-settings:"tnum" 1;}
   a{color:var(--accent);text-decoration:none}
-  .wrap{max-width:1280px;margin:0 auto;padding:34px 28px 80px}
-  header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:26px}
-  h1{font-size:25px;font-weight:680;letter-spacing:-.02em;margin:0}
-  .sub{color:var(--muted);font-size:13.5px;margin-top:6px;line-height:1.5}
-  .gen{color:var(--muted);font-size:12px;text-align:right;line-height:1.6}
-  .gen b{color:var(--ink);font-weight:600}
+  .wrap{max-width:1280px;margin:0 auto;padding:36px 28px 90px;counter-reset:cardidx}
+  header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;
+    margin-bottom:26px;padding-bottom:18px;border-bottom:1px solid var(--line)}
+  h1{font-family:var(--disp);font-size:25px;font-weight:600;letter-spacing:-.02em;margin:0}
+  .sub{color:var(--ink-soft);font-size:13px;margin-top:8px;line-height:1.55;max-width:760px}
+  .gen{color:var(--muted);font-size:11.5px;text-align:right;line-height:1.7;font-family:var(--mono)}
+  .gen b{color:var(--ink);font-weight:500}
+  .eyebrow{text-transform:uppercase;letter-spacing:.08em;font-size:11px;font-weight:600;color:var(--muted)}
 
   /* KPI cards */
-  .kpis{display:grid;grid-template-columns:repeat(8,1fr);gap:13px;margin-bottom:22px}
+  .kpis{display:grid;grid-template-columns:repeat(8,1fr);gap:12px;margin-bottom:24px}
   .kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
-    padding:16px 16px 14px;box-shadow:var(--shadow)}
-  .kpi .lab{color:var(--muted);font-size:11.5px;font-weight:560;text-transform:uppercase;letter-spacing:.04em}
-  .kpi .val{font-size:24px;font-weight:700;letter-spacing:-.02em;margin-top:9px;line-height:1}
-  .kpi .hint{color:var(--muted);font-size:11.5px;margin-top:7px}
-  .kpi .val small{font-size:14px;font-weight:600;color:var(--muted);margin-left:1px}
+    padding:13px 14px 12px;box-shadow:var(--hl)}
+  .kpi .lab{color:var(--muted);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em}
+  .kpi .lab::after{content:"";display:block;width:22px;height:2px;background:var(--accent);margin-top:6px}
+  .kpi .val{font-family:var(--disp);font-size:25px;font-weight:700;letter-spacing:-.01em;margin-top:9px;line-height:1;font-variant-numeric:tabular-nums}
+  .kpi .hint{color:var(--muted);font-size:10.5px;margin-top:7px;font-family:var(--mono)}
+  .kpi .val small{font-family:var(--mono);font-size:13px;font-weight:500;color:var(--muted);margin-left:2px}
 
   /* Filter bar */
-  .filters{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.86);
-    backdrop-filter:saturate(180%) blur(10px);-webkit-backdrop-filter:saturate(180%) blur(10px);
-    border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:22px;
-    display:flex;align-items:center;gap:16px;flex-wrap:wrap;box-shadow:var(--shadow)}
+  .filters{position:sticky;top:0;z-index:20;background:rgba(244,246,248,.85);
+    backdrop-filter:saturate(140%) blur(8px);-webkit-backdrop-filter:saturate(140%) blur(8px);
+    border:1px solid var(--line);border-radius:var(--radius);padding:11px 14px;margin-bottom:22px;
+    display:flex;align-items:center;gap:16px;flex-wrap:wrap;box-shadow:var(--hl)}
   .fgroup{display:flex;align-items:center;gap:8px}
-  .flab{font-size:11.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
-  .seg{display:inline-flex;background:var(--line2);border-radius:10px;padding:3px}
-  .seg button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:12.5px;font-weight:560;
-    padding:6px 11px;border-radius:8px;cursor:pointer;transition:.12s}
-  .seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.06)}
-  select,.btn{font:inherit;font-size:12.5px;color:var(--ink);background:#fff;border:1px solid var(--line);
-    border-radius:9px;padding:7px 10px;cursor:pointer;outline:none}
+  .flab{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.08em}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--radius);padding:2px}
+  .seg button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;font-weight:500;
+    padding:5px 11px;border-radius:1px;cursor:pointer;transition:.1s}
+  .seg button.on{background:var(--ink);color:var(--bg)}
+  select,.btn{font:inherit;font-size:12px;color:var(--ink);background:var(--surface);border:1px solid var(--line);
+    border-radius:var(--radius);padding:7px 10px;cursor:pointer;outline:none}
   select:focus{border-color:var(--accent)}
-  .btn:hover{border-color:#dcdce4}
-  .chips{display:flex;gap:6px;flex-wrap:wrap;max-width:560px}
-  .chip{font-size:12px;padding:5px 10px;border-radius:20px;border:1px solid var(--line);background:#fff;
-    color:#555;cursor:pointer;user-select:none;transition:.12s;white-space:nowrap}
-  .chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn:hover{border-color:var(--accent)}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;max-width:580px}
+  .chip{font-size:11.5px;padding:4px 10px;border-radius:var(--radius);border:1px solid var(--line);background:var(--surface);
+    color:var(--ink-soft);cursor:pointer;user-select:none;transition:.1s;white-space:nowrap}
+  .chip.on{background:var(--ink);border-color:var(--ink);color:var(--bg)}
   .spacer{flex:1}
 
   /* Chart grid */
-  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
-    padding:18px 18px 8px;box-shadow:var(--shadow);min-width:0}
+    padding:16px 18px 10px;box-shadow:var(--hl);min-width:0;transition:box-shadow .12s}
   .card.full{grid-column:1 / -1}
-  .card h3{margin:0;font-size:14.5px;font-weight:640;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
-  .card .desc{color:var(--muted);font-size:12px;margin:5px 0 2px;line-height:1.45}
+  .card>h3{margin:0 0 2px;font-family:var(--disp);font-size:13.5px;font-weight:600;letter-spacing:-.005em;
+    display:flex;align-items:center;gap:8px;padding-bottom:10px}
+  .card:hover{box-shadow:0 1px 2px rgba(16,24,40,.06),0 6px 16px rgba(16,24,40,.05)}
+  .card .desc{color:var(--muted);font-size:11.5px;margin:8px 0 2px;line-height:1.5}
+  .card .desc code{font-family:var(--mono);font-size:11px;color:var(--ink-soft)}
   .chart{width:100%;height:300px}
   .chart.tall{height:340px}
   .chart.cal{height:200px}
-  .tag{font-size:10.5px;font-weight:600;color:var(--accent);background:var(--accent-soft);
-    padding:2px 7px;border-radius:6px;letter-spacing:.02em}
+  .tag{font-family:var(--mono);font-size:10px;font-weight:500;color:var(--accent);background:transparent;
+    border:1px solid var(--accent);padding:1px 6px;border-radius:var(--radius);letter-spacing:.02em;text-transform:uppercase}
 
   /* Table */
-  .tablewrap{overflow:auto;border-radius:10px;margin-top:6px;max-height:460px}
-  table{width:100%;border-collapse:collapse;font-size:12.5px}
-  th,td{text-align:right;padding:8px 12px;border-bottom:1px solid var(--line2);white-space:nowrap}
+  .tablewrap{overflow:auto;border-radius:var(--radius);margin-top:8px;max-height:460px}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th,td{text-align:right;padding:8px 12px;border-bottom:1px solid var(--line2);white-space:nowrap;
+    font-family:var(--mono);font-variant-numeric:tabular-nums}
   th:first-child,td:first-child{text-align:left}
-  th{position:sticky;top:0;background:#fff;color:var(--muted);font-weight:600;font-size:11px;
-    text-transform:uppercase;letter-spacing:.03em;cursor:pointer;user-select:none;z-index:1}
-  th:hover{color:var(--ink)}
+  th{position:sticky;top:0;background:var(--surface);color:var(--muted);font-weight:600;font-size:10px;
+    font-family:"IBM Plex Sans",sans-serif;text-transform:uppercase;letter-spacing:.06em;cursor:pointer;user-select:none;z-index:1;
+    border-bottom:1px solid var(--line)}
+  th:hover{color:var(--accent)}
   tbody tr:hover{background:var(--line2)}
-  td.proj{color:var(--ink);font-weight:560}
+  td.proj{color:var(--ink);font-weight:500;font-family:"IBM Plex Sans",sans-serif}
   td.mut{color:var(--muted)}
-  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:middle}
-  .est{font-size:10px;color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:0 4px;margin-left:5px}
+  .dot{display:inline-block;width:7px;height:7px;border-radius:0;margin-right:7px;vertical-align:middle}
+  .est{font-family:var(--mono);font-size:9.5px;color:var(--muted);border:1px solid var(--line);border-radius:var(--radius);padding:0 4px;margin-left:6px}
 
-  .note{font-size:12px;color:var(--muted);line-height:1.6;background:var(--line2);border-radius:12px;
-    padding:14px 16px;margin-top:20px}
-  .note b{color:var(--ink)}
+  .note{font-size:11.5px;color:var(--ink-soft);line-height:1.65;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px 16px;margin-top:22px;box-shadow:var(--hl)}
+  .note b{color:var(--ink);font-weight:600}
   .footcols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px}
-  .divider{grid-column:1/-1;display:flex;align-items:center;gap:14px;margin:14px 2px 0}
-  .divider h2{font-size:17px;font-weight:680;letter-spacing:-.02em;margin:0;white-space:nowrap}
-  .divider .ln{flex:1;height:1px;background:var(--line)}
-  .divider .sm{color:var(--muted);font-size:12.5px}
+  .divider{grid-column:1/-1;display:flex;align-items:baseline;gap:14px;margin:20px 2px 2px}
+  .divider h2{font-family:var(--disp);font-size:16px;font-weight:600;letter-spacing:-.01em;margin:0;white-space:nowrap}
+  .divider h2{position:relative;padding-left:13px}
+  .divider h2::before{content:"";position:absolute;left:0;top:2px;bottom:2px;width:3px;background:var(--accent);border-radius:2px}
+  .divider .ln{flex:1;height:1px;background:var(--line);align-self:center}
+  .divider .sm{color:var(--muted);font-size:12px}
   @media(max-width:1280px){.kpis{grid-template-columns:repeat(4,1fr)}}
   @media(max-width:1080px){.kpis{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.card.full{grid-column:auto}.footcols{grid-template-columns:1fr}}
+
+  /* Insights feed */
+  .insights{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--hl);
+    padding:15px 18px;margin-bottom:22px}
+  .insights h3{margin:0 0 12px;font-family:var(--disp);font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:8px;
+    padding-bottom:9px;border-bottom:1px solid var(--line2)}
+  .ins-list{display:grid;grid-template-columns:1fr 1fr;gap:0 26px}
+  .ins{display:flex;gap:11px;align-items:baseline;font-size:12.5px;line-height:1.5;padding:7px 0;border-bottom:1px solid var(--line2)}
+  .ins b{font-weight:600;font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--ink)}
+  .itag{flex:none;font-family:"IBM Plex Sans",sans-serif;font-size:9.5px;font-weight:600;letter-spacing:.06em;padding:2px 6px;
+    border-radius:var(--radius);text-transform:uppercase;min-width:60px;text-align:center;align-self:flex-start;margin-top:1px;
+    border:1px solid var(--line);color:var(--muted);background:transparent}
+  .itag.hot{color:var(--accent);border-color:var(--accent)}
+  .itag.alert{color:#fff;background:var(--hot);border-color:var(--hot)}
+  @media(max-width:900px){.ins-list{grid-template-columns:1fr}}
+
+  /* table search */
+  .tsearch{font:inherit;font-family:var(--mono);font-size:12px;color:var(--ink);background:var(--surface);border:1px solid var(--line);
+    border-radius:var(--radius);padding:6px 11px 6px 30px;outline:none;width:250px;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238B887D' stroke-width='2.4'><circle cx='11' cy='11' r='7'/><path d='M21 21l-4.3-4.3'/></svg>");
+    background-repeat:no-repeat;background-position:9px center}
+  .tsearch:focus{border-color:var(--accent)}
+
+  /* Deep-dive drawer — SESSION DOSSIER */
+  .modal-back{position:fixed;inset:0;background:rgba(16,24,40,.40);display:none;justify-content:flex-end;z-index:100}
+  .modal-back.show{display:flex}
+  .modal{background:var(--surface);width:min(620px,96vw);height:100vh;overflow-y:auto;
+    border-left:4px solid var(--accent);box-shadow:-1px 0 0 var(--ink-soft);
+    padding:22px 26px 48px;animation:slidein .18s cubic-bezier(.2,.7,.3,1)}
+  @keyframes slidein{from{transform:translateX(26px);opacity:.5}to{transform:none;opacity:1}}
+  .modal .mh{position:sticky;top:-22px;background:var(--surface);padding-top:2px;margin:-2px 0 0;z-index:2;
+    border-bottom:1px solid var(--accent);padding-bottom:11px}
+  .modal .mh .row{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+  .modal .mh h2{font-family:var(--disp);font-size:20px;font-weight:700;margin:0;letter-spacing:-.01em;display:flex;align-items:center;gap:9px}
+  .modal .mclose{border:1px solid var(--line);background:transparent;width:30px;height:30px;border-radius:var(--radius);cursor:pointer;
+    font-size:14px;color:var(--muted);flex:none;line-height:1}
+  .modal .mclose:hover{background:var(--line2);color:var(--ink)}
+  .modal .mmeta{color:var(--muted);font-family:var(--mono);font-size:11.5px;margin-top:6px}
+  .modal .mmeta span:not(:last-child)::after{content:" | ";color:var(--line)}
+  .modal .mission{border-left:3px solid var(--accent);padding:2px 0 2px 13px;margin:16px 0;
+    font-size:13.5px;font-style:italic;line-height:1.55;color:var(--ink-soft)}
+  .mkpis{display:grid;grid-template-columns:repeat(3,1fr);margin:16px 0;border:1px solid var(--line);border-radius:var(--radius)}
+  .mkpi{padding:10px 12px;border-right:1px solid var(--line)}
+  .mkpi:nth-child(3n){border-right:0}
+  .mkpi:nth-child(n+4){border-top:1px solid var(--line)}
+  .mkpi .l{color:var(--muted);font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+  .mkpi .v{font-family:var(--disp);font-size:17px;font-weight:700;margin-top:4px;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+  .mkpi .s{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:3px}
+  .msec{margin-top:20px}
+  .msec h4{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);
+    margin:0 0 9px;display:flex;align-items:center;gap:8px}
+  .msec h4::before{content:attr(data-i) " ·";color:var(--accent);font-family:var(--disp);font-weight:600}
+  .msec h4 .ln{flex:1;height:1px;background:var(--line)}
+  .msec h4 .x{font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted);font-family:var(--mono);font-size:10.5px}
+  .mtl{display:flex;align-items:flex-end;gap:2px;height:50px;border:1px solid var(--line);border-radius:var(--radius);
+    padding:6px 8px;border-bottom-width:2px;border-bottom-color:var(--ink-soft)}
+  .mtl span{flex:1;min-width:2px;background:var(--ink);border-radius:0;transition:.1s}
+  .mtl span:hover{background:var(--accent)}
+  .mrow{display:flex;flex-wrap:wrap;gap:6px}
+  .pill{font-family:var(--mono);font-size:11px;padding:3px 8px;border-radius:var(--radius);background:transparent;
+    color:var(--ink-soft);border:1px solid var(--line)}
+  .pill b{color:var(--ink);font-weight:600}
+  .dl{display:grid;gap:0}
+  .dl .row{display:flex;align-items:baseline;gap:6px;padding:6px 0;border-bottom:1px solid var(--line2)}
+  .dl .k{color:var(--ink-soft);font-size:12px;white-space:nowrap}
+  .dl .led{flex:1;border-bottom:1px dotted var(--line);transform:translateY(-3px)}
+  .dl .v{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--ink);font-size:12px;font-weight:500;white-space:nowrap}
+  .bars{display:grid;gap:6px}
+  .bar{display:grid;grid-template-columns:92px 1fr auto;align-items:center;gap:9px;font-size:11px;color:var(--ink-soft);font-family:var(--mono)}
+  .bar .tr{height:8px;border-radius:0;border:1px solid var(--line);overflow:hidden}
+  .bar .tr i{display:block;height:100%}
+  .bar .vv{font-variant-numeric:tabular-nums;color:var(--ink);font-weight:500}
+  .mlist{font-size:12px;color:var(--ink-soft);line-height:1.5;margin:0;padding:0;list-style:none}
+  .mlist li{padding:6px 0;border-bottom:1px solid var(--line2)}
+  .mlist li:last-child{border-bottom:0}
+  .ship{border:1px solid var(--pos);border-radius:var(--radius);padding:12px 14px}
+  .ship .big{font-family:var(--disp);font-size:14px;font-weight:600;color:var(--pos)}
+  .ship .big::before{content:"✓ "}
+  .ship .sub{font-family:var(--mono);font-size:11px;color:var(--ink-soft);margin-top:3px}
+  .norepo{color:var(--muted);font-size:12.5px}
+  tbody tr{cursor:pointer}
+  td.warn{color:var(--danger)}
+  td.warn::after{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--danger);margin-left:6px;vertical-align:middle}
+  @media(max-width:760px){.mkpis{grid-template-columns:repeat(2,1fr)}.mkpi:nth-child(3n){border-right:1px solid var(--line)}.mkpi:nth-child(2n){border-right:0}}
 </style>
 </head>
 <body>
@@ -102,13 +200,18 @@ if (typeof echarts === 'undefined')
   <header class="top">
     <div>
       <h1>Claude Code · Session Analytics</h1>
-      <div class="sub">How long sessions actually take — exploring <b>API wall time</b> across every local session transcript.<br>
-        Toggle the duration metric, slice by project / model / date, and watch every view update.</div>
+      <div class="sub">What your Claude Code work <b>costs</b> and <b>ships</b> — with usage (time, tokens, cache, tools) as the diagnostic context that explains it.<br>
+        Toggle the duration metric, slice by project / model / date, search or click any session for its full story.</div>
     </div>
     <div class="gen" id="gen"></div>
   </header>
 
   <div class="kpis" id="kpis"></div>
+
+  <div class="insights">
+    <h3>What's worth knowing <span class="tag">auto-generated</span></h3>
+    <div class="ins-list" id="insList"></div>
+  </div>
 
   <div class="filters">
     <div class="fgroup">
@@ -256,7 +359,7 @@ if (typeof echarts === 'undefined')
 
     <div class="card">
       <h3>Output ledger <span class="tag">lines ±</span></h3>
-      <div class="desc">Code &amp; docs changed per project — <span style="color:#16a34a">added</span> vs <span style="color:#ef4444">removed</span> via Edit.</div>
+      <div class="desc">Code &amp; docs changed per project — <span style="color:#138A5E">added</span> vs <span style="color:#C0392B">removed</span> via Edit.</div>
       <div class="chart" id="churn"></div>
     </div>
 
@@ -273,8 +376,81 @@ if (typeof echarts === 'undefined')
     </div>
 
     <div class="card full">
-      <h3>Sessions <span class="tag" id="cntTag"></span></h3>
-      <div class="desc">Click a column header to sort. Reflects all filters above.</div>
+      <h3>Cost in context <span class="tag" id="benchTag">vs published benchmarks</span></h3>
+      <div class="desc">Your <b>list-price estimate</b> of $/active-day vs external benchmarks (Anthropic, morphllm, CloudZero) — <b>log scale</b>. Heavy agentic use runs high on a raw-API basis. <span style="color:var(--muted)" id="benchNote"></span> Hover any bar for its source.</div>
+      <div class="chart" id="bench"></div>
+    </div>
+
+    <div class="card">
+      <h3>Shipped code <span class="tag" id="shipTag">effort → outcome</span></h3>
+      <div class="desc">Commits in each project's git repo during its sessions — <span style="color:#138A5E">merged</span> to main vs on a <span style="color:#6B7280">branch</span>. Connects tokens spent to code shipped.</div>
+      <div class="chart" id="shipped"></div>
+    </div>
+
+    <div class="card">
+      <h3>Durability of output <span class="tag" id="reworkTag">rework</span></h3>
+      <div class="desc"><span style="color:#0F4C81">Durable</span> lines vs lines <span style="color:#C0392B">reworked</span> (added then deleted within 2 weeks). A neutral churn signal — high rework ≠ "bad", but worth noticing. <span style="color:var(--muted)">Approximate, file-level.</span></div>
+      <div class="chart" id="rework"></div>
+    </div>
+
+    <div class="divider">
+      <h2>Working with Claude Code</h2><div class="ln"></div>
+      <span class="sm">craft, reliability &amp; delegation — leading indicators for improving how you prompt, and your agents &amp; skills</span>
+    </div>
+
+    <div class="card">
+      <h3>First-try &amp; correction rate <span class="tag" id="corrTag">per 100 turns</span></h3>
+      <div class="desc">Short corrective replies you typed + interrupts, per 100 assistant turns, by project. Lower = Claude got it right first time. Detected with a built-in heuristic lexicon (tunable in <code>etl.py</code>) — <span id="corrEx" style="color:var(--muted)"></span></div>
+      <div class="chart" id="corr"></div>
+    </div>
+
+    <div class="card">
+      <h3>First-prompt specificity <span class="tag">vs cost</span></h3>
+      <div class="desc">Each session scored 0–4 by how many specificity signals its opening prompt has: <b>detailed</b> (≥70 chars), <b>file/code refs</b>, <b>constraints</b> ("must / only / don't…"), <b>multi-step</b>. Does a more-specified brief lead to cheaper sessions? Hover a dot to see which signals it had.</div>
+      <div class="chart" id="briefq"></div>
+    </div>
+
+    <div class="card">
+      <h3>Tool-error taxonomy <span class="tag" id="errTag">failures</span></h3>
+      <div class="desc">Every <code>is_error</code> tool result, clustered by normalized signature. Turns "the harness keeps stopping me" into a fixable punch-list.</div>
+      <div class="chart" id="errtax"></div>
+    </div>
+
+    <div class="card">
+      <h3>Cache economics <span class="tag" id="cacheEconTag">5m vs 1h</span></h3>
+      <div class="desc">Cache <b>writes</b> split by TTL — 5-min (1.25× input) vs 1-hour (2× input) — per project. 1-hour writes cost more but survive gaps; the balance drives your real bill.</div>
+      <div class="chart" id="cacheecon"></div>
+    </div>
+
+    <div class="card">
+      <h3>Delegation: cost vs yield <span class="tag" id="delegTag">subagents</span></h3>
+      <div class="desc">Each dot is a sub-agent: tokens spent (x) vs files written/edited (y), coloured by model. Bottom-right = expensive, low-output agents to prune or downshift.</div>
+      <div class="chart" id="deleg"></div>
+    </div>
+
+    <div class="card">
+      <h3>Where the spend lands <span class="tag" id="outcomeTag">shipped vs throwaway</span></h3>
+      <div class="desc">Cost by session outcome: <span style="color:#138A5E">shipped</span> (commits landed), <span style="color:#0F4C81">exploratory</span> (research / no repo), <span style="color:#B7791F">throwaway</span> (edited a repo but never committed).</div>
+      <div class="chart" id="outcome"></div>
+    </div>
+
+    <div class="card full">
+      <h3>Per-skill scorecard <span class="tag" id="skillScoreTag">cheap, low-rework, shipped?</span></h3>
+      <div class="desc">Sessions grouped by their primary skill / power-feature: cost, tokens, correction rate, and how often they ship commits. Which skills are efficient vs expensive theater.</div>
+      <div class="tablewrap"><table id="skilltbl"><thead></thead><tbody></tbody></table></div>
+    </div>
+
+    <div class="insights" style="margin-bottom:18px">
+      <h3>Records &amp; streaks <span class="tag">personal bests</span></h3>
+      <div class="ins-list" id="recList"></div>
+    </div>
+
+    <div class="card full">
+      <h3 style="justify-content:space-between">
+        <span>Sessions <span class="tag" id="cntTag"></span></span>
+        <input type="search" class="tsearch" id="tsearch" placeholder="Search project, mission, id, branch…" autocomplete="off">
+      </h3>
+      <div class="desc">Click a column header to sort · click any row to open its full story. Search filters across project, mission text, branch, model &amp; id.</div>
       <div class="tablewrap"><table id="tbl"><thead></thead><tbody></tbody></table></div>
     </div>
   </div>
@@ -287,23 +463,30 @@ if (typeof echarts === 'undefined')
   </div>
 </div>
 
+<div class="modal-back" id="modal"></div>
+
 <script>
 // ---------- bootstrap guard ----------
 if (typeof DATA === 'undefined') {
-  document.body.innerHTML = '<div style="max-width:680px;margin:18vh auto;font-family:-apple-system,Segoe UI,sans-serif;color:#16161d;text-align:center">'
+  document.body.innerHTML = '<div style="max-width:680px;margin:18vh auto;font-family:-apple-system,Segoe UI,sans-serif;color:#111827;text-align:center">'
     + '<h1 style="font-size:22px;font-weight:680">No data yet</h1>'
-    + '<p style="color:#8a8a99;line-height:1.6">Generate <code>data.js</code> first, then reload this page:</p>'
-    + '<pre style="display:inline-block;text-align:left;background:#f4f4f7;border-radius:10px;padding:14px 18px;font-size:13px">python3 etl.py</pre></div>';
+    + '<p style="color:#6B7280;line-height:1.6">Generate <code>data.js</code> first, then reload this page:</p>'
+    + '<pre style="display:inline-block;text-align:left;background:#EEF1F4;border-radius:10px;padding:14px 18px;font-size:13px">python3 etl.py</pre></div>';
   throw new Error('data.js not found — run: python3 etl.py');
 }
 // ---------- helpers ----------
 const S0 = DATA.sessions;
 const $ = s => document.querySelector(s);
 const DOW = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-const PALETTE = ['#4f46e5','#0ea5e9','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316','#6366f1','#84cc16','#06b6d4','#a855f7','#e11d48'];
+const PALETTE = ['#0E7C7B','#0F4C81','#B7791F','#7A5195','#3C8C5A','#BC5090','#6B7280','#9A6324','#2F6E8F','#5B8266','#8A5A83','#46627A','#A0763C','#5C6B7A'];
 const projects = [...new Set(S0.map(s=>s.project))].sort((a,b)=>tot(b)-tot(a));
 function tot(p){return S0.filter(s=>s.project===p).reduce((a,s)=>a+s.active,0);}
 const projColor = {}; projects.forEach((p,i)=>projColor[p]=PALETTE[i%PALETTE.length]);
+const MODELCLR={'claude-opus-4-8':'#0E7C7B','claude-opus-4-7':'#46778A','claude-opus-4-6':'#5C6B7A',
+  'claude-sonnet-4-6':'#0F4C81','claude-haiku-4-5':'#3C8C5A','claude-fable-5':'#7A5195','google/gemma':'#B7791F'};
+function modelColor(m){ if(!m) return '#6B7280'; if(MODELCLR[m]) return MODELCLR[m];
+  for(const k in MODELCLR) if(m.startsWith(k)) return MODELCLR[k];
+  return PALETTE[Math.abs([...m].reduce((a,c)=>a+c.charCodeAt(0),0))%PALETTE.length]; }
 
 function fmtDur(ms){
   if(ms==null) return '–';
@@ -316,8 +499,8 @@ function median(a){ if(!a.length) return 0; const b=[...a].sort((x,y)=>x-y); con
 
 // content-stat helpers
 function aggCounts(F,field){ const o={}; F.forEach(s=>{ const m=s[field]; for(const k in m) o[k]=(o[k]||0)+m[k]; }); return o; }
-const CATCOLOR={Shell:'#4f46e5',Files:'#0ea5e9',Web:'#10b981',Agents:'#f59e0b','Browser/MCP':'#ec4899',Other:'#94a3b8',
-  Docs:'#6366f1',Code:'#0ea5e9',Media:'#f59e0b',Data:'#10b981'};
+const CATCOLOR={Shell:'#0E7C7B',Files:'#0F4C81',Web:'#3C8C5A',Agents:'#B7791F','Browser/MCP':'#7A5195',Other:'#6B7280',
+  Docs:'#7A5195',Code:'#0F4C81',Media:'#B7791F',Data:'#3C8C5A'};
 function toolCat(n){ if(n==='Bash')return 'Shell';
   if(['Read','Write','Edit','NotebookEdit'].includes(n))return 'Files';
   if(['WebSearch','WebFetch'].includes(n))return 'Web';
@@ -334,7 +517,7 @@ function extCat(e){ return EXTCAT[e]||'Other'; }
 function treeData(counts,catFn,shortFn){
   const cats={};
   for(const k in counts){ const c=catFn(k); (cats[c]=cats[c]||[]).push({name:(shortFn?shortFn(k):k),value:counts[k]}); }
-  return Object.entries(cats).map(([c,ch])=>({name:c,itemStyle:{color:CATCOLOR[c]||'#94a3b8'},
+  return Object.entries(cats).map(([c,ch])=>({name:c,itemStyle:{color:CATCOLOR[c]||'#6B7280'},
     children:ch.sort((a,b)=>b.value-a.value)})).sort((a,b)=>
       b.children.reduce((x,y)=>x+y.value,0)-a.children.reduce((x,y)=>x+y.value,0));
 }
@@ -353,7 +536,7 @@ function fmtUSD(v){ return v>=1000? '$'+(v/1000).toFixed(v<10000?1:0)+'k' : '$'+
 function cleanSkill(n){ return n.replace('claude-skills:','').replace('speckit-','spec:'); }
 
 // ---------- state ----------
-let metric='active', range='all', model='', selProj=new Set(projects), sortKey='start', sortDir=-1;
+let metric='active', range='all', model='', selProj=new Set(projects), sortKey='start', sortDir=-1, tableQuery='';
 function metricVal(s){ if(metric==='active')return s.active; if(metric==='span')return s.span; return s.turn!=null?s.turn:s.active; }
 
 function filtered(){
@@ -369,15 +552,27 @@ function filtered(){
 // ---------- charts registry ----------
 const charts={};
 function mk(id){ const c=echarts.init($('#'+id),null,{renderer:'canvas'}); charts[id]=c; return c; }
+const MONO='JetBrains Mono,ui-monospace,Menlo,monospace';
 const baseGrid={left:48,right:18,top:24,bottom:34};
-const axisStyle={axisLine:{lineStyle:{color:'#e6e6ee'}},axisTick:{show:false},
-  axisLabel:{color:'#9a9aa8',fontSize:11},splitLine:{lineStyle:{color:'#f3f3f7'}}};
-const TT={backgroundColor:'#fff',borderColor:'#ececf2',borderWidth:1,textStyle:{color:'#16161d',fontSize:12},
-  extraCssText:'box-shadow:0 6px 22px rgba(20,20,40,.10);border-radius:10px;padding:9px 12px;'};
+const axisStyle={axisLine:{lineStyle:{color:'#CBD2DA'}},axisTick:{show:false},
+  axisLabel:{color:'#6B7280',fontSize:10.5,fontFamily:MONO},splitLine:{lineStyle:{color:'#EEF1F4'}}};
+const TT={backgroundColor:'#111827',borderColor:'#111827',borderWidth:0,textStyle:{color:'#F3F4F6',fontSize:11.5,fontFamily:MONO},
+  extraCssText:'box-shadow:0 4px 16px rgba(16,24,40,.16);border-radius:6px;border-left:2px solid #0E7C7B;padding:8px 11px;'};
 
 ['trend','heat','hist','cal','proj','scatter','turnhist','models',
  'tooltree','net','filetree','bash','throughput','tokens',
- 'skills','domains','themes','churn','hotspots','cost'].forEach(mk);
+ 'skills','domains','themes','churn','hotspots','cost','shipped','rework','bench',
+ 'corr','errtax','deleg','cacheecon','outcome','briefq'].forEach(mk);
+
+// Published $/dev/active-day benchmarks (multi-source, fact-checked Jun 2026). See README.
+const BENCH_DAY=[
+  {label:'Anthropic — enterprise avg',     v:13,  src:'Anthropic docs (vendor)',      note:'org-wide average $/dev/active-day; revised up from $6 in Apr 2026'},
+  {label:'morphllm — "daily pro" profile', v:8.1, src:'morphllm (independent)',        note:'token-math, Sonnet 4.6, 75% cache hit'},
+  {label:'Anthropic — 90th-pct ceiling',   v:30,  src:'Anthropic docs (vendor)',       note:'90% of users below $30/active-day'},
+  {label:'morphllm — full-day agent',      v:27,  src:'morphllm (independent)',        note:'token-math, full agentic working day'},
+  {label:'Heavy power-user (raw API)',     v:54,  src:'CloudZero / morphllm',          note:'$400–2000/dev/mo ÷ ~22 working days'},
+];
+const BENCH_NOTE='On a Max subscription you pay a flat $100–200/mo regardless of token use — so your list-price estimate is the API-equivalent, not the bill.';
 
 // ---------- renderers ----------
 function renderKPIs(F){
@@ -392,16 +587,19 @@ function renderKPIs(F){
   const think=F.reduce((a,s)=>a+s.nThinking,0);
   const cost=F.reduce((a,s)=>a+sessionCost(s),0), saved=F.reduce((a,s)=>a+cacheSaved(s),0);
   const wl=F.reduce((a,s)=>a+s.writeLines,0), la=F.reduce((a,s)=>a+s.locAdd,0);
+  const cm=F.reduce((a,s)=>{if(s.commits){a.n+=s.commits.n;a.m+=s.commits.merged;}return a;},{n:0,m:0});
+  const cpm=cm.m?cost/cm.m:0;
+  // outcome-first: lead with value & what shipped, then usage as diagnostic context
   const cards=[
-    ['Sessions', F.length, range==='all'?'all time':'last '+range+'d'],
-    ['Total '+metricLabel(), hrs(totalMs), 'across '+days.size+' active days'],
-    ['Median session', fmtDur(median(durs)), 'p90 '+fmtDur(pct(durs,90))],
-    ['Longest session', fmtDur(Math.max(0,...durs)), 'single session'],
     ['Est. cost', fmtUSD(cost), 'list price · '+fmtUSD(saved)+' saved by cache'],
+    ['Merged commits', fmtNum(cm.m), cm.n?cm.n+' total · ~'+fmtUSD(cpm)+'/merged':'no git repos'],
     ['Lines written', fmtNum(wl), '+'+fmtNum(la)+' edited (net)'],
-    ['Output tokens', fmtNum(outTok), 'incl. subagents'],
-    ['Tool calls', fmtNum(toolCalls), subs+' subagents spawned'],
+    ['Sessions', F.length, range==='all'?'all time · '+days.size+' active days':'last '+range+'d'],
+    ['Total '+metricLabel(), hrs(totalMs), 'median '+fmtDur(median(durs))],
     ['Cache hit rate', hit.toFixed(1)+'<small>%</small>', fmtNum(cr)+' tok from cache'],
+    ['Tool calls', fmtNum(toolCalls), subs+' subagents spawned'],
+    ['Output tokens', fmtNum(outTok), 'incl. subagents'],
+    ['Longest session', fmtDur(Math.max(0,...durs)), 'p90 '+fmtDur(pct(durs,90))],
     ['Thinking blocks', fmtNum(think), 'extended reasoning'],
   ];
   $('#kpis').innerHTML=cards.map(c=>`<div class="kpi"><div class="lab">${c[0]}</div><div class="val">${c[1]}</div><div class="hint">${c[2]}</div></div>`).join('');
@@ -423,11 +621,11 @@ function renderTrend(F){
   charts.trend.setOption({
     tooltip:{trigger:'axis',...TT,valueFormatter:v=>v.toFixed(2)+' h'},
     grid:{...baseGrid,bottom:40},
-    xAxis:{type:'category',data:dates,...axisStyle,axisLabel:{color:'#9a9aa8',fontSize:10,formatter:v=>v.slice(5)},boundaryGap:true},
-    yAxis:{type:'value',name:'hours',nameTextStyle:{color:'#b6b6c2',fontSize:10},...axisStyle},
+    xAxis:{type:'category',data:dates,...axisStyle,axisLabel:{color:'#6B7280',fontSize:10,formatter:v=>v.slice(5)},boundaryGap:true},
+    yAxis:{type:'value',name:'hours',nameTextStyle:{color:'#6B7280',fontSize:10},...axisStyle},
     series:[
-      {type:'bar',data:vals,itemStyle:{color:'#c7cbf5',borderRadius:[3,3,0,0]},barMaxWidth:22,name:'daily'},
-      {type:'line',data:ma,smooth:true,symbol:'none',lineStyle:{color:'#4f46e5',width:2.5},name:'7-day avg',z:3}
+      {type:'bar',data:vals,itemStyle:{color:'#9CC7C6',borderRadius:[3,3,0,0]},barMaxWidth:22,name:'daily'},
+      {type:'line',data:ma,smooth:true,symbol:'none',lineStyle:{color:'#0E7C7B',width:2.5},name:'7-day avg',z:3}
     ]
   },true);
 }
@@ -440,12 +638,12 @@ function renderHeat(F){
   charts.heat.setOption({
     tooltip:{...TT,formatter:p=>`${DOW[p.value[1]]} ${String(p.value[0]).padStart(2,'0')}:00<br><b>${fmtDur(p.value[2]*36e5)}</b> active`},
     grid:{left:42,right:14,top:12,bottom:54},
-    xAxis:{type:'category',data:[...Array(24).keys()],...axisStyle,axisLabel:{color:'#9a9aa8',fontSize:9,interval:1,formatter:v=>v%2?'':v},splitLine:{show:false}},
+    xAxis:{type:'category',data:[...Array(24).keys()],...axisStyle,axisLabel:{color:'#6B7280',fontSize:9,interval:1,formatter:v=>v%2?'':v},splitLine:{show:false}},
     yAxis:{type:'category',data:DOW,...axisStyle,splitLine:{show:false}},
     visualMap:{min:0,max:mx||1,calculable:false,orient:'horizontal',left:'center',bottom:6,itemWidth:11,itemHeight:120,
-      text:['more',''],textStyle:{color:'#9a9aa8',fontSize:10},inRange:{color:['#f3f4ff','#c7d2fe','#818cf8','#4338ca']}},
+      text:['more',''],textStyle:{color:'#6B7280',fontSize:10},inRange:{color:['#EAF1F1','#A8D0CE','#4FA3A0','#0E7C7B']}},
     series:[{type:'heatmap',data,itemStyle:{borderColor:'#fff',borderWidth:1.5},
-      emphasis:{itemStyle:{borderColor:'#16161d',borderWidth:1}}}]
+      emphasis:{itemStyle:{borderColor:'#111827',borderWidth:1}}}]
   },true);
 }
 
@@ -457,10 +655,10 @@ function renderHist(F){
   charts.hist.setOption({
     tooltip:{trigger:'axis',...TT,formatter:p=>`${p[0].name}<br><b>${p[0].value}</b> session${p[0].value==1?'':'s'}`},
     grid:{...baseGrid,bottom:40},
-    xAxis:{type:'category',data:labs,...axisStyle,axisLabel:{color:'#9a9aa8',fontSize:10,interval:0,rotate:0}},
+    xAxis:{type:'category',data:labs,...axisStyle,axisLabel:{color:'#6B7280',fontSize:10,interval:0,rotate:0}},
     yAxis:{type:'value',...axisStyle},
-    series:[{type:'bar',data:cnt,itemStyle:{color:'#4f46e5',borderRadius:[4,4,0,0]},barMaxWidth:30,
-      label:{show:true,position:'top',color:'#9a9aa8',fontSize:10}}]
+    series:[{type:'bar',data:cnt,itemStyle:{color:'#0E7C7B',borderRadius:[4,4,0,0]},barMaxWidth:30,
+      label:{show:true,position:'top',color:'#6B7280',fontSize:10}}]
   },true);
 }
 
@@ -473,13 +671,13 @@ function renderCal(F){
   charts.cal.setOption({
     tooltip:{...TT,formatter:p=>`${p.value[0]}<br><b>${fmtDur(p.value[1]*36e5)}</b> active`},
     visualMap:{min:0,max:mx,calculable:false,orient:'horizontal',right:10,top:0,itemWidth:11,itemHeight:90,
-      text:['','less'],textStyle:{color:'#9a9aa8',fontSize:10},inRange:{color:['#f3f4ff','#c7d2fe','#818cf8','#4338ca']}},
+      text:['','less'],textStyle:{color:'#6B7280',fontSize:10},inRange:{color:['#EAF1F1','#A8D0CE','#4FA3A0','#0E7C7B']}},
     calendar:{top:34,left:34,right:18,cellSize:['auto',16],range:calRange,
-      itemStyle:{color:'#fafafb',borderColor:'#fff',borderWidth:2},
+      itemStyle:{color:'#FFFFFF',borderColor:'#fff',borderWidth:2},
       splitLine:{show:false},
       yearLabel:{show:false},
-      monthLabel:{color:'#9a9aa8',fontSize:11,nameMap:'en'},
-      dayLabel:{color:'#c2c2cc',fontSize:10,firstDay:1,nameMap:['S','M','T','W','T','F','S']}},
+      monthLabel:{color:'#6B7280',fontSize:11,nameMap:'en'},
+      dayLabel:{color:'#CBD2DA',fontSize:10,firstDay:1,nameMap:['S','M','T','W','T','F','S']}},
     series:[{type:'heatmap',coordinateSystem:'calendar',data,itemStyle:{borderRadius:3}}]
   },true);
 }
@@ -490,10 +688,10 @@ function renderProj(F){
   charts.proj.setOption({
     tooltip:{trigger:'axis',axisPointer:{type:'none'},...TT,formatter:p=>`${p[0].name}<br><b>${fmtDur(p[0].value*36e5)}</b> · ${(by[p[0].name]||{n:0}).n} sessions`},
     grid:{left:8,right:60,top:8,bottom:24,containLabel:true},
-    xAxis:{type:'value',...axisStyle,axisLabel:{color:'#9a9aa8',fontSize:10,formatter:v=>v+'h'}},
-    yAxis:{type:'category',data:arr.map(a=>a.p),...axisStyle,axisLabel:{color:'#5a5a68',fontSize:11},axisLine:{show:false}},
+    xAxis:{type:'value',...axisStyle,axisLabel:{color:'#6B7280',fontSize:10,formatter:v=>v+'h'}},
+    yAxis:{type:'category',data:arr.map(a=>a.p),...axisStyle,axisLabel:{color:'#3A4452',fontSize:11},axisLine:{show:false}},
     series:[{type:'bar',data:arr.map(a=>({value:+(a.ms/36e5).toFixed(2),itemStyle:{color:projColor[a.p],borderRadius:[0,4,4,0]}})),
-      barMaxWidth:18,label:{show:true,position:'right',color:'#9a9aa8',fontSize:10,
+      barMaxWidth:18,label:{show:true,position:'right',color:'#6B7280',fontSize:10,
         formatter:p=>arr[p.dataIndex].n+'×'}}]
   },true);
 }
@@ -509,8 +707,8 @@ function renderScatter(F){
   charts.scatter.setOption({
     tooltip:{...TT,formatter:p=>`<b>${p.value[4]}</b> · ${p.value[3]}<br>${fmtDur(p.value[0]*6e4)} · ${fmtNum(p.value[1])} out tok · ${p.value[2]} tools`},
     grid:{left:50,right:18,top:12,bottom:42},
-    xAxis:{type:'value',name:'minutes',nameTextStyle:{color:'#b6b6c2',fontSize:10},nameGap:24,nameLocation:'middle',...axisStyle},
-    yAxis:{type:'value',name:'out tokens',nameTextStyle:{color:'#b6b6c2',fontSize:10},...axisStyle,axisLabel:{color:'#9a9aa8',fontSize:10,formatter:fmtNum}},
+    xAxis:{type:'value',name:'minutes',nameTextStyle:{color:'#6B7280',fontSize:10},nameGap:24,nameLocation:'middle',...axisStyle},
+    yAxis:{type:'value',name:'out tokens',nameTextStyle:{color:'#6B7280',fontSize:10},...axisStyle,axisLabel:{color:'#6B7280',fontSize:10,formatter:fmtNum}},
     series
   },true);
 }
@@ -524,22 +722,21 @@ function renderTurnHist(F){
   charts.turnhist.setOption({
     tooltip:{trigger:'axis',...TT,formatter:p=>`${p[0].name}<br><b>${p[0].value}</b> turns`},
     grid:{...baseGrid,bottom:40},
-    xAxis:{type:'category',data:labs,...axisStyle,axisLabel:{color:'#9a9aa8',fontSize:9.5,interval:0}},
+    xAxis:{type:'category',data:labs,...axisStyle,axisLabel:{color:'#6B7280',fontSize:9.5,interval:0}},
     yAxis:{type:'value',...axisStyle},
-    series:[{type:'bar',data:cnt,itemStyle:{color:'#0ea5e9',borderRadius:[4,4,0,0]},barMaxWidth:26}]
+    series:[{type:'bar',data:cnt,itemStyle:{color:'#0F4C81',borderRadius:[4,4,0,0]},barMaxWidth:26}]
   },true);
 }
 
 function renderModels(F){
   const by={}; F.forEach(s=>{ const m=s.primaryModel||'unknown'; by[m]=(by[m]||0)+s.active; });
-  const arr=Object.entries(by).map(([m,v],i)=>({name:m.replace('claude-','').replace('google/',''),value:+(v/36e5).toFixed(2)})).sort((a,b)=>b.value-a.value);
+  const arr=Object.entries(by).map(([m,v])=>({name:m.replace('claude-','').replace('google/',''),value:+(v/36e5).toFixed(2),
+    itemStyle:{color:modelColor(m)}})).sort((a,b)=>b.value-a.value);
   charts.models.setOption({
     tooltip:{...TT,formatter:p=>`<b>${p.name}</b><br>${p.value} h · ${p.percent}%`},
-    legend:{bottom:0,icon:'circle',textStyle:{color:'#6a6a78',fontSize:11},itemWidth:9,itemHeight:9},
+    legend:{bottom:0,icon:'circle',textStyle:{color:'#3A4452',fontSize:11},itemWidth:9,itemHeight:9},
     series:[{type:'pie',radius:['46%','70%'],center:['50%','44%'],avoidLabelOverlap:true,
-      itemStyle:{borderColor:'#fff',borderWidth:3},
-      color:['#4f46e5','#818cf8','#0ea5e9','#10b981','#f59e0b','#ec4899'],
-      label:{show:false},data:arr}]
+      itemStyle:{borderColor:'#fff',borderWidth:3},label:{show:false},data:arr}]
   },true);
 }
 
@@ -575,7 +772,7 @@ function renderNet(F){
   const tc=aggCounts(F,'toolCounts'), tr=aggCounts(F,'trans');
   const nodes=DATA.topTools.filter(t=>tc[t]).map(t=>({name:t,value:tc[t],
     symbolSize:Math.max(12,Math.min(58,Math.sqrt(tc[t])*0.85)),
-    itemStyle:{color:CATCOLOR[toolCat(t)]||'#94a3b8'}}));
+    itemStyle:{color:CATCOLOR[toolCat(t)]||'#6B7280'}}));
   const names=new Set(nodes.map(n=>n.name));
   let edges=Object.entries(tr).map(([k,v])=>{const a=k.split('>');return {source:a[0],target:a[1],value:v};})
     .filter(e=>names.has(e.source)&&names.has(e.target));
@@ -587,9 +784,9 @@ function renderNet(F){
     tooltip:{...TT,formatter:p=>p.dataType==='edge'?`${p.data.source} → ${p.data.target}<br><b>${fmtNum(p.value)}</b> times`:`<b>${p.name}</b><br>${fmtNum(p.value)} calls`},
     series:[{type:'graph',layout:'circular',circular:{rotateLabel:false},data:nodes,edges,roam:false,
       center:['50%','52%'],zoom:0.82,
-      label:{show:true,color:'#3a3a48',fontSize:11,fontWeight:560,position:'right',distance:4},
+      label:{show:true,color:'#3A4452',fontSize:11,fontWeight:560,position:'right',distance:4},
       lineStyle:{color:'source'},
-      emphasis:{focus:'adjacency',label:{color:'#16161d'},lineStyle:{opacity:.85}}}]
+      emphasis:{focus:'adjacency',label:{color:'#111827'},lineStyle:{opacity:.85}}}]
   },true);
 }
 function renderBash(F){
@@ -598,12 +795,12 @@ function renderBash(F){
   charts.bash.setOption({
     tooltip:{trigger:'axis',axisPointer:{type:'none'},...TT,formatter:p=>`<code>${p[0].name}</code><br><b>${fmtNum(p[0].value)}</b> calls`},
     grid:{left:8,right:46,top:8,bottom:22,containLabel:true},
-    xAxis:{type:'value',...axisStyle,axisLabel:{color:'#9a9aa8',fontSize:10,formatter:fmtNum}},
+    xAxis:{type:'value',...axisStyle,axisLabel:{color:'#6B7280',fontSize:10,formatter:fmtNum}},
     yAxis:{type:'category',data:arr.map(a=>a[0]),...axisStyle,axisLine:{show:false},
-      axisLabel:{color:'#5a5a68',fontSize:11,fontFamily:'ui-monospace,Menlo,monospace'}},
+      axisLabel:{color:'#3A4452',fontSize:11,fontFamily:'ui-monospace,Menlo,monospace'}},
     series:[{type:'bar',data:arr.map(a=>a[1]),barMaxWidth:15,
-      itemStyle:{color:'#4f46e5',borderRadius:[0,4,4,0]},
-      label:{show:true,position:'right',color:'#9a9aa8',fontSize:10,formatter:p=>fmtNum(p.value)}}]
+      itemStyle:{color:'#0E7C7B',borderRadius:[0,4,4,0]},
+      label:{show:true,position:'right',color:'#6B7280',fontSize:10,formatter:p=>fmtNum(p.value)}}]
   },true);
 }
 function renderThroughput(F){
@@ -614,10 +811,10 @@ function renderThroughput(F){
   charts.throughput.setOption({
     tooltip:{trigger:'axis',axisPointer:{type:'none'},...TT,formatter:p=>`${p[0].name}<br><b>${fmtNum(p[0].value)}</b> out tok / active hr`},
     grid:{left:8,right:54,top:8,bottom:24,containLabel:true},
-    xAxis:{type:'value',...axisStyle,axisLabel:{color:'#9a9aa8',fontSize:10,formatter:fmtNum}},
-    yAxis:{type:'category',data:arr.map(a=>a.p),...axisStyle,axisLine:{show:false},axisLabel:{color:'#5a5a68',fontSize:11}},
+    xAxis:{type:'value',...axisStyle,axisLabel:{color:'#6B7280',fontSize:10,formatter:fmtNum}},
+    yAxis:{type:'category',data:arr.map(a=>a.p),...axisStyle,axisLine:{show:false},axisLabel:{color:'#3A4452',fontSize:11}},
     series:[{type:'bar',data:arr.map(a=>({value:Math.round(a.rate),itemStyle:{color:projColor[a.p],borderRadius:[0,4,4,0]}})),
-      barMaxWidth:16,label:{show:true,position:'right',color:'#9a9aa8',fontSize:10,formatter:p=>fmtNum(p.value)}}]
+      barMaxWidth:16,label:{show:true,position:'right',color:'#6B7280',fontSize:10,formatter:p=>fmtNum(p.value)}}]
   },true);
 }
 function renderTokens(F){
@@ -625,14 +822,14 @@ function renderTokens(F){
   F.forEach(s=>{inp+=s.tokensIn+s.subTokensIn;cc+=s.cacheCreate+s.subCacheCreate;cr+=s.cacheRead+s.subCacheRead;out+=s.tokensOut+s.subTokensOut;});
   const hit=cr+cc+inp>0?(100*cr/(cr+cc+inp)):0;
   $('#cacheTag').textContent=hit.toFixed(1)+'% cache hit';
-  const rows=[['Fresh input',inp,'#94a3b8'],['Cache writes',cc,'#f59e0b'],['Output',out,'#10b981'],['Cache reads',cr,'#4f46e5']];
+  const rows=[['Fresh input',inp,'#6B7280'],['Cache writes',cc,'#B7791F'],['Output',out,'#3C8C5A'],['Cache reads',cr,'#0E7C7B']];
   charts.tokens.setOption({
     tooltip:{trigger:'axis',axisPointer:{type:'none'},...TT,formatter:p=>`${p[0].name}<br><b>${fmtNum(p[0].value)}</b> tokens`},
     grid:{left:8,right:60,top:6,bottom:20,containLabel:true},
-    xAxis:{type:'value',...axisStyle,axisLabel:{color:'#9a9aa8',fontSize:10,formatter:fmtNum}},
-    yAxis:{type:'category',data:rows.map(r=>r[0]),...axisStyle,axisLine:{show:false},axisLabel:{color:'#5a5a68',fontSize:11.5}},
+    xAxis:{type:'value',...axisStyle,axisLabel:{color:'#6B7280',fontSize:10,formatter:fmtNum}},
+    yAxis:{type:'category',data:rows.map(r=>r[0]),...axisStyle,axisLine:{show:false},axisLabel:{color:'#3A4452',fontSize:11.5}},
     series:[{type:'bar',data:rows.map(r=>({value:r[1],itemStyle:{color:r[2],borderRadius:[0,5,5,0]}})),barMaxWidth:26,
-      label:{show:true,position:'right',color:'#6a6a78',fontSize:11,fontWeight:600,formatter:p=>fmtNum(p.value)}}]
+      label:{show:true,position:'right',color:'#3A4452',fontSize:11,fontWeight:600,formatter:p=>fmtNum(p.value)}}]
   },true);
 }
 
@@ -641,21 +838,21 @@ function hbar(id,pairs,color,fmt,mono){
   charts[id].setOption({
     tooltip:{trigger:'axis',axisPointer:{type:'none'},...TT,formatter:p=>`${p[0].name}<br><b>${(fmt||fmtNum)(p[0].value)}</b>`},
     grid:{left:8,right:52,top:8,bottom:22,containLabel:true},
-    xAxis:{type:'value',...axisStyle,axisLabel:{color:'#9a9aa8',fontSize:10,formatter:fmt||fmtNum}},
+    xAxis:{type:'value',...axisStyle,axisLabel:{color:'#6B7280',fontSize:10,formatter:fmt||fmtNum}},
     yAxis:{type:'category',data:arr.map(a=>a[0]),...axisStyle,axisLine:{show:false},
-      axisLabel:{color:'#5a5a68',fontSize:11,fontFamily:mono?'ui-monospace,Menlo,monospace':'inherit'}},
+      axisLabel:{color:'#3A4452',fontSize:11,fontFamily:mono?'ui-monospace,Menlo,monospace':'inherit'}},
     series:[{type:'bar',data:arr.map((a,i)=>({value:a[1],itemStyle:{color:typeof color==='function'?color(a,i):color,borderRadius:[0,4,4,0]}})),
-      barMaxWidth:15,label:{show:true,position:'right',color:'#9a9aa8',fontSize:10,formatter:p=>(fmt||fmtNum)(p.value)}}]
+      barMaxWidth:15,label:{show:true,position:'right',color:'#6B7280',fontSize:10,formatter:p=>(fmt||fmtNum)(p.value)}}]
   },true);
 }
 function renderSkills(F){
   const c=aggCounts(F,'skills');
   const arr=Object.entries(c).sort((a,b)=>b[1]-a[1]).slice(0,12).map(([k,v])=>[cleanSkill(k),v]);
-  hbar('skills',arr,(a)=>a[0].startsWith('spec:')?'#f59e0b':a[0]==='deep-research'?'#4f46e5':a[0]==='kb'?'#0ea5e9':'#8b5cf6');
+  hbar('skills',arr,(a)=>a[0].startsWith('spec:')?'#B7791F':a[0]==='deep-research'?'#0E7C7B':a[0]==='kb'?'#0F4C81':'#7A5195');
 }
 function renderDomains(F){
   const c=aggCounts(F,'domains');
-  hbar('domains',Object.entries(c).sort((a,b)=>b[1]-a[1]).slice(0,12),'#10b981',null,true);
+  hbar('domains',Object.entries(c).sort((a,b)=>b[1]-a[1]).slice(0,12),'#3C8C5A',null,true);
 }
 function renderThemes(F){
   const c=aggCounts(F,'searchKw');
@@ -667,7 +864,7 @@ function renderThemes(F){
       width:'100%',height:'100%',top:4,left:2,right:2,bottom:2,
       label:{color:'#fff',fontSize:12,fontWeight:600},
       itemStyle:{borderColor:'#fff',borderWidth:2,gapWidth:2},
-      levels:[{color:['#4338ca','#4f46e5','#6366f1','#818cf8','#a5b4fc'],
+      levels:[{color:['#0B5E5D','#0E7C7B','#46778A','#5C6B7A','#CBD2DA'],
         colorMappingBy:'value',itemStyle:{gapWidth:2}}]}]
   },true);
 }
@@ -680,11 +877,11 @@ function renderChurn(F){
       formatter:p=>`${p[0].name}<br>+${fmtNum(p[0].value)} added<br>−${fmtNum(Math.abs(p[1].value))} removed`},
     legend:{show:false},
     grid:{left:8,right:48,top:8,bottom:22,containLabel:true},
-    xAxis:{type:'value',...axisStyle,axisLabel:{color:'#9a9aa8',fontSize:10,formatter:v=>fmtNum(Math.abs(v))}},
-    yAxis:{type:'category',data:arr.map(a=>a.p),...axisStyle,axisLine:{show:false},axisLabel:{color:'#5a5a68',fontSize:11}},
+    xAxis:{type:'value',...axisStyle,axisLabel:{color:'#6B7280',fontSize:10,formatter:v=>fmtNum(Math.abs(v))}},
+    yAxis:{type:'category',data:arr.map(a=>a.p),...axisStyle,axisLine:{show:false},axisLabel:{color:'#3A4452',fontSize:11}},
     series:[
-      {name:'added',type:'bar',stack:'t',data:arr.map(a=>a.a),itemStyle:{color:'#16a34a',borderRadius:[0,3,3,0]},barMaxWidth:15},
-      {name:'removed',type:'bar',stack:'t',data:arr.map(a=>-a.d),itemStyle:{color:'#ef4444',borderRadius:[3,0,0,3]},barMaxWidth:15}
+      {name:'added',type:'bar',stack:'t',data:arr.map(a=>a.a),itemStyle:{color:'#138A5E',borderRadius:[0,3,3,0]},barMaxWidth:15},
+      {name:'removed',type:'bar',stack:'t',data:arr.map(a=>-a.d),itemStyle:{color:'#C0392B',borderRadius:[3,0,0,3]},barMaxWidth:15}
     ]
   },true);
 }
@@ -692,7 +889,7 @@ function renderHotspots(F){
   const c=aggCounts(F,'files');
   const data=Object.entries(c).sort((a,b)=>b[1]-a[1]).slice(0,42).map(([path,v])=>{
     const base=path.split('/').pop(); const e=(base.match(/\.([a-z0-9]+)$/i)||[])[1];
-    return {name:base,value:v,path:path,itemStyle:{color:CATCOLOR[extCat((e||'').toLowerCase())]||'#94a3b8'}};
+    return {name:base,value:v,path:path,itemStyle:{color:CATCOLOR[extCat((e||'').toLowerCase())]||'#6B7280'}};
   });
   charts.hotspots.setOption({
     tooltip:{...TT,formatter:p=>`${(p.data&&p.data.path)||p.name}<br><b>${fmtNum(p.value)}</b> touches`},
@@ -711,40 +908,364 @@ function renderCost(F){
   charts.cost.setOption({
     tooltip:{trigger:'axis',axisPointer:{type:'none'},...TT,formatter:p=>`${p[0].name}<br><b>${fmtUSD(p[0].value)}</b>`},
     grid:{left:8,right:60,top:8,bottom:24,containLabel:true},
-    xAxis:{type:'value',...axisStyle,axisLabel:{color:'#9a9aa8',fontSize:10,formatter:v=>'$'+fmtNum(v)}},
-    yAxis:{type:'category',data:arr.map(a=>a[0]),...axisStyle,axisLine:{show:false},axisLabel:{color:'#5a5a68',fontSize:11}},
+    xAxis:{type:'value',...axisStyle,axisLabel:{color:'#6B7280',fontSize:10,formatter:v=>'$'+fmtNum(v)}},
+    yAxis:{type:'category',data:arr.map(a=>a[0]),...axisStyle,axisLine:{show:false},axisLabel:{color:'#3A4452',fontSize:11}},
     series:[{type:'bar',data:arr.map(a=>({value:+a[1].toFixed(2),itemStyle:{color:projColor[a[0]],borderRadius:[0,4,4,0]}})),
-      barMaxWidth:16,label:{show:true,position:'right',color:'#9a9aa8',fontSize:10,formatter:p=>fmtUSD(p.value)}}]
+      barMaxWidth:16,label:{show:true,position:'right',color:'#6B7280',fontSize:10,formatter:p=>fmtUSD(p.value)}}]
   },true);
+}
+
+function esc(s){ return (s==null?'':''+s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function sessHit(s){ let cr=0,cc=0,inp=0; for(const m in s.modelTok){const t=s.modelTok[m]; cr+=t.cr; cc+=t.cc5+t.cc1; inp+=t.in;} const d=cr+cc+inp; return d?cr/d:0; }
+
+function renderShipped(F){
+  const by={}; F.forEach(s=>{ if(!s.commits) return; const c=s.commits;
+    const v=by[s.project]=by[s.project]||{m:0,b:0,add:0,del:0,n:0,cost:0};
+    v.m+=c.merged; v.b+=(c.n-c.merged); v.add+=c.add; v.del+=c.del; v.n+=c.n; v.cost+=sessionCost(s); });
+  const arr=Object.entries(by).map(([p,v])=>({p,...v})).sort((a,b)=>(a.m+a.b)-(b.m+b.b));
+  const tn=arr.reduce((a,x)=>a+x.n,0), tm=arr.reduce((a,x)=>a+x.m,0);
+  $('#shipTag').textContent = tn? `${tn} commits · ${tm} merged` : 'no git repos in view';
+  charts.shipped.setOption({
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'},...TT,formatter:p=>{const v=by[p[0].name]||{n:0,m:0,add:0,del:0,cost:0};
+      return `${p[0].name}<br><b>${v.n}</b> commits · <b>${v.m}</b> merged<br>+${fmtNum(v.add)} / −${fmtNum(v.del)} lines<br>~${fmtUSD(v.cost/Math.max(1,v.n))} per commit`;}},
+    grid:{left:8,right:64,top:8,bottom:22,containLabel:true},
+    xAxis:{type:'value',...axisStyle,axisLabel:{color:'#6B7280',fontSize:10}},
+    yAxis:{type:'category',data:arr.map(a=>a.p),...axisStyle,axisLine:{show:false},axisLabel:{color:'#3A4452',fontSize:11}},
+    series:[
+      {name:'merged',type:'bar',stack:'c',data:arr.map(a=>a.m),itemStyle:{color:'#138A5E'},barMaxWidth:16},
+      {name:'branch',type:'bar',stack:'c',data:arr.map(a=>a.b),itemStyle:{color:'#CBD2DA',borderRadius:[0,3,3,0]},barMaxWidth:16,
+        label:{show:true,position:'right',color:'#6B7280',fontSize:10,formatter:p=>by[arr[p.dataIndex].p].n+'×'}}]
+  },true);
+}
+function renderBenchmark(F){
+  const cost=F.reduce((a,s)=>a+sessionCost(s),0);
+  const days=new Set(); F.forEach(s=>Object.keys(s.cal).forEach(d=>days.add(d)));
+  const perDay=days.size?cost/days.size:0;
+  $('#benchNote').textContent=BENCH_NOTE;
+  $('#benchTag').textContent=perDay?'you: $'+(perDay<100?perDay.toFixed(0):Math.round(perDay))+'/active-day':'no data';
+  const rows=[...BENCH_DAY.map(b=>({...b})),
+    {label:'You — list-price estimate', v:perDay, you:true, src:'this dashboard', note:days.size+' active days · '+fmtUSD(cost)+' total (API-equivalent)'}];
+  rows.sort((a,b)=>a.v-b.v);
+  charts.bench.setOption({
+    tooltip:{trigger:'axis',axisPointer:{type:'none'},...TT,formatter:p=>{const r=rows[p[0].dataIndex]; if(!r)return '';
+      return `${r.label}<br><b>$${r.v<100?r.v.toFixed(1):Math.round(r.v)}</b>/active-day<br><span style="color:#6B7280">${r.src} — ${esc(r.note)}</span>`;}},
+    grid:{left:8,right:54,top:8,bottom:24,containLabel:true},
+    xAxis:{type:'log',min:1,...axisStyle,axisLabel:{color:'#6B7280',fontSize:10,formatter:v=>'$'+v}},
+    yAxis:{type:'category',data:rows.map(r=>r.label),...axisStyle,axisLine:{show:false},axisLabel:{color:'#3A4452',fontSize:11}},
+    series:[{type:'bar',data:rows.map(r=>({value:Math.max(0.1,+r.v.toFixed(2)),
+      itemStyle:{color:r.you?'#0E7C7B':'#CBD2DA',borderRadius:[0,4,4,0]}})),barMaxWidth:16,
+      label:{show:true,position:'right',color:'#3A4452',fontSize:10,formatter:p=>'$'+(rows[p.dataIndex].v<100?rows[p.dataIndex].v.toFixed(1):Math.round(rows[p.dataIndex].v))}}]
+  },true);
+}
+function renderRework(F){
+  const by={}; F.forEach(s=>{ if(!s.commits) return; const v=by[s.project]=by[s.project]||{add:0,churn:0};
+    v.add+=s.commits.add; v.churn+=s.commits.churn||0; });
+  const arr=Object.entries(by).map(([p,v])=>({p,durable:Math.max(0,v.add-v.churn),churn:v.churn,add:v.add}))
+    .filter(a=>a.add>0).sort((a,b)=>a.add-b.add);
+  const ta=arr.reduce((a,x)=>a+x.add,0), tc=arr.reduce((a,x)=>a+x.churn,0);
+  $('#reworkTag').textContent = ta? `${Math.round(100*tc/ta)}% reworked` : 'no commits in view';
+  charts.rework.setOption({
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'},...TT,formatter:p=>{const v=by[p[0].name]||{add:0,churn:0};
+      return `${p[0].name}<br>+${fmtNum(v.add)} added<br><b>${fmtNum(v.churn)}</b> reworked &lt;2wk (${Math.round(100*v.churn/Math.max(1,v.add))}%)`;}},
+    grid:{left:8,right:50,top:8,bottom:22,containLabel:true},
+    xAxis:{type:'value',...axisStyle,axisLabel:{color:'#6B7280',fontSize:10,formatter:fmtNum}},
+    yAxis:{type:'category',data:arr.map(a=>a.p),...axisStyle,axisLine:{show:false},axisLabel:{color:'#3A4452',fontSize:11}},
+    series:[
+      {name:'durable',type:'bar',stack:'r',data:arr.map(a=>a.durable),itemStyle:{color:'#0F4C81'},barMaxWidth:16},
+      {name:'reworked',type:'bar',stack:'r',data:arr.map(a=>a.churn),itemStyle:{color:'#C0392B',borderRadius:[0,3,3,0]},barMaxWidth:16,
+        label:{show:true,position:'right',color:'#6B7280',fontSize:10,formatter:p=>{const v=by[arr[p.dataIndex].p]; return Math.round(100*v.churn/Math.max(1,v.add))+'%';}}}]
+  },true);
+}
+
+// which insight categories get the accent (vermilion) outline vs a neutral outline
+const HOTCAT=new Set(['SPEND','SHIPPED','QUALITY']);
+function itag(cat){ const cls=cat==='ALERT'?' alert':HOTCAT.has(cat)?' hot':''; return `<span class="itag${cls}">${cat}</span>`; }
+function costAnomThr(costs){ const s=[...costs].sort((a,b)=>a-b); if(s.length<5) return Infinity;
+  const p90=s[Math.floor(0.9*(s.length-1))]||0; return Math.max(p90*2, 5); } // true outliers: >2× the 90th pct
+function renderInsights(F){
+  const ins=[]; const P=v=>Math.round(v)+'%';
+  const costs=F.map(sessionCost); const total=costs.reduce((a,b)=>a+b,0);
+  const med=median(costs); const thr=costAnomThr(costs);
+  const ranked=F.map((s,i)=>({s,c:costs[i]})).sort((a,b)=>b.c-a.c);
+  // ALERT — cost anomalies (feature 1): sessions far above the rest of the distribution
+  { const out=ranked.filter(x=>x.c>thr); if(out.length){ const t=out[0];
+    ins.push({cat:'ALERT',html:`<b>${out.length}</b> cost-outlier session${out.length>1?'s':''} (top decile &amp; &gt;2× the 90th pct) — biggest: ${esc(t.s.project)} ${t.s.date} at <b>${fmtUSD(t.c)}</b>`}); } }
+  // ALERT — week-over-week spend spike
+  if(F.length>4){ const mx=Math.max(...F.map(s=>s.startMs)); const wk=7*864e5;
+    const a=F.filter(s=>s.startMs>mx-wk).reduce((x,s)=>x+sessionCost(s),0);
+    const b=F.filter(s=>s.startMs<=mx-wk&&s.startMs>mx-2*wk).reduce((x,s)=>x+sessionCost(s),0);
+    if(a>0||b>0){ const up=a>=b, d=b>0?Math.abs(100*(a-b)/b):100; const spike=up&&d>=50&&b>0;
+      ins.push({cat:spike?'ALERT':'TREND',html:`Spend ${up?'up':'down'} <b>${b>0?P(d):'—'}</b> last 7 days (${fmtUSD(a)}) vs prior 7 (${fmtUSD(b)})`}); } }
+  // SPEND concentration
+  if(total>0){ let acc=0,k=0; for(const x of ranked){acc+=x.c;k++; if(acc>=total*0.5)break;}
+    ins.push({cat:'SPEND',html:`<b>${k}</b> of ${F.length} sessions (${P(100*k/F.length)}) drive <b>${P(100*acc/total)}</b> of your ${fmtUSD(total)} spend`}); }
+  // CACHE savings
+  const saved=F.reduce((a,s)=>a+cacheSaved(s),0);
+  if(saved>0){ let cr=0,cc=0,inp=0; F.forEach(s=>{for(const m in s.modelTok){const t=s.modelTok[m];cr+=t.cr;cc+=t.cc5+t.cc1;inp+=t.in;}});
+    ins.push({cat:'CACHE',html:`Prompt cache saved <b>${fmtUSD(saved)}</b> (${P(100*cr/(cr+cc+inp||1))} hit rate) — list spend would be ~${fmtUSD(total+saved)} without it`}); }
+  // SHIPPED + cost per merged commit
+  const ship=F.reduce((a,s)=>{if(s.commits){a.n+=s.commits.n;a.m+=s.commits.merged;a.c+=sessionCost(s);}return a;},{n:0,m:0,c:0});
+  if(ship.n){ const cpm=ship.m?ship.c/ship.m:0;
+    ins.push({cat:'SHIPPED',html:`<b>${ship.n}</b> commits shipped, <b>${ship.m}</b> merged to main${cpm?` — ~<b>${fmtUSD(cpm)}</b> per merged commit`:''}`}); }
+  // QUALITY — rework / churn
+  const rw=F.reduce((a,s)=>{if(s.commits){a.add+=s.commits.add;a.churn+=s.commits.churn||0;}return a;},{add:0,churn:0});
+  if(rw.add>0&&rw.churn>0){ const proj={}; F.forEach(s=>{if(!s.commits)return;proj[s.project]=proj[s.project]||{a:0,c:0};proj[s.project].a+=s.commits.add;proj[s.project].c+=s.commits.churn||0;});
+    const worst=Object.entries(proj).filter(([p,v])=>v.a>200).sort((a,b)=>b[1].c/b[1].a-a[1].c/a[1].a)[0];
+    ins.push({cat:'QUALITY',html:`<b>${P(100*rw.churn/rw.add)}</b> of added lines were reworked within 2 weeks${worst?` — highest in ${esc(worst[0])} (${P(100*worst[1].c/worst[1].a)})`:''}`}); }
+  // PATTERN — busiest hour
+  const hd={}; F.forEach(s=>{for(const k in s.hd)hd[k]=(hd[k]||0)+s.hd[k];});
+  const top=Object.entries(hd).sort((a,b)=>b[1]-a[1])[0];
+  if(top){ const [d,h]=top[0].split('_').map(Number);
+    ins.push({cat:'PATTERN',html:`Most active <b>${DOW[d]} ${String(h).padStart(2,'0')}:00</b> (${fmtDur(top[1]*1000)} of work in that slot)`}); }
+  // RECORD — longest
+  const lng=[...F].sort((a,b)=>b.active-a.active)[0];
+  if(lng) ins.push({cat:'RECORD',html:`Longest session: <b>${fmtDur(lng.active)}</b> active — ${esc(lng.project)} (${lng.nTurns||0} turns)`});
+  // CACHE outlier (cold + expensive)
+  const cold=F.map((s,i)=>({s,c:costs[i],h:sessHit(s)})).filter(x=>x.c>Math.max(med,0.5)).sort((a,b)=>a.h-b.h)[0];
+  if(cold&&cold.h<0.85) ins.push({cat:'CACHE',html:`${esc(cold.s.project)} on ${cold.s.date} ran at <b>${P(100*cold.h)}</b> cache hit (${fmtUSD(cold.c)}) — colder than usual`});
+  const order={ALERT:0,SPEND:1,SHIPPED:2,QUALITY:3,CACHE:4,TREND:5,PATTERN:6,RECORD:7};
+  ins.sort((a,b)=>(order[a.cat]??9)-(order[b.cat]??9));
+  $('#insList').innerHTML = ins.slice(0,8).map(x=>
+    `<div class="ins">${itag(x.cat)}<span>${x.html}</span></div>`).join('')
+    || '<div class="ins"><span>No sessions in the current filter.</span></div>';
+}
+
+function openDetail(s){
+  const cost=sessionCost(s), hit=sessHit(s);
+  const tools=Object.entries(s.toolCounts).sort((a,b)=>b[1]-a[1]);
+  const nTools=tools.reduce((a,t)=>a+t[1],0), tmx=Math.max(1,...tools.map(t=>t[1]));
+  const files=Object.entries(s.files).sort((a,b)=>b[1]-a[1]);
+  const mx=Math.max(1,...s.turns);
+  const tl=s.turns.length ? s.turns.map(t=>`<span style="height:${Math.max(6,Math.round(t/mx*100))}%" title="${fmtDur(t)}"></span>`).join('')
+                          : '<span style="height:30%;opacity:.35" title="no turn timing"></span>';
+  // token + cost by model
+  const inTok=s.tokensIn+s.subTokensIn, outTok=s.tokensOut+s.subTokensOut;
+  const crTok=s.cacheRead+s.subCacheRead, ccTok=s.cacheCreate+s.subCacheCreate;
+  const mt=Object.entries(s.modelTok).map(([m,t])=>{const p=PM[m]; const c=p?(t.in*p[0]+t.out*p[1]+t.cr*p[0]*PRICE.cacheRead+t.cc5*p[0]*PRICE.cacheWrite5m+t.cc1*p[0]*PRICE.cacheWrite1h)/1e6:0; return {m,c};}).sort((a,b)=>b.c-a.c);
+  const modelRows=mt.map(x=>`<div class="row"><span class="k">${esc(x.m.replace('claude-','').replace('google/',''))}</span><span class="led"></span><span class="v">${fmtUSD(x.c)}</span></div>`).join('');
+  const ship = s.commits
+    ? `<div class="ship"><div class="big">${s.commits.n} commit${s.commits.n>1?'s':''} · ${s.commits.merged} merged to main</div>`
+      + `<div class="sub">+${fmtNum(s.commits.add)} / −${fmtNum(s.commits.del)} lines`
+      + (s.commits.churn?` · ${Math.round(100*s.commits.churn/Math.max(1,s.commits.add))}% reworked &lt;2wk`:'')
+      + (s.commits.n?` · ~${fmtUSD(cost/s.commits.n)}/commit`:'')+`</div>`
+      + `<ul class="mlist" style="margin-top:8px">${s.commits.subjects.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`
+    : `<div class="norepo">${s.hasRepo?'No commits matched this session window.':'No git repo — research / non-code session.'}</div>`;
+  const sec=(i,title,x,body)=>`<div class="msec"><h4 data-i="${i}">${title}<span class="ln"></span>${x?`<span class="x">${x}</span>`:''}</h4>${body}</div>`;
+  $('#modal').innerHTML = `<div class="modal">
+    <div class="mh">
+      <div class="row"><h2><span class="dot" style="background:${modelColor(s.primaryModel)}"></span>${esc(s.project)}</h2>
+        <button class="mclose" onclick="closeDetail()" title="Close (Esc)">✕</button></div>
+      <div class="mmeta"><span>${s.date}</span><span>${s.id}</span><span>${esc((s.primaryModel||'–').replace('claude-',''))}</span><span>${esc(s.branch||'—')}</span>${s.estimated?'<span>est&nbsp;timing</span>':''}</div>
+    </div>
+    ${s.mission?`<div class="mission">${esc(s.mission)}</div>`:''}
+    <div class="mkpis">
+      <div class="mkpi"><div class="l">Active</div><div class="v">${fmtDur(s.active)}</div><div class="s">turn ${fmtDur(s.turn)} · span ${fmtDur(s.span)}</div></div>
+      <div class="mkpi"><div class="l">Est. cost</div><div class="v">${fmtUSD(cost)}</div><div class="s">${fmtUSD(cacheSaved(s))} cache-saved</div></div>
+      <div class="mkpi"><div class="l">Cache hit</div><div class="v">${Math.round(hit*100)}%</div><div class="s">${fmtNum(crTok)} read</div></div>
+      <div class="mkpi"><div class="l">Tokens out</div><div class="v">${fmtNum(outTok)}</div><div class="s">${fmtNum(inTok)} in · ${fmtNum(ccTok)} cc-wr</div></div>
+      <div class="mkpi"><div class="l">Tool calls</div><div class="v">${fmtNum(nTools)}</div><div class="s">${s.nToolErr||0} err · ${s.nThinking||0} think</div></div>
+      <div class="mkpi"><div class="l">Subagents</div><div class="v">${s.nSubagents||0}</div><div class="s">${s.nTurns||0} turns</div></div>
+    </div>
+    ${sec('A','Turn timeline',`${s.nTurns||0} turns · ${fmtNum(nTools)} tools`,`<div class="mtl">${tl}</div>`)}
+    ${mt.length?sec('B','Cost by model','',`<div class="dl">${modelRows}</div>`):''}
+    ${sec('C','Tools',`${tools.length} kinds`,`<div class="mrow">${tools.slice(0,14).map(t=>`<span class="pill">${esc(shortTool(t[0]))} <b>${t[1]}</b></span>`).join('')||'—'}</div>`)}
+    ${files.length?sec('D','Files touched',`${files.length}`,`<div class="mrow">${files.slice(0,12).map(f=>`<span class="pill" title="${esc(f[0])}">${esc(f[0].split('/').pop())} <b>${f[1]}</b></span>`).join('')}</div>`):''}
+    ${s.asks&&s.asks.length?sec('E','What you asked',`${s.asks.length}`,`<ul class="mlist">${s.asks.map(a=>`<li>${esc(a)}</li>`).join('')}</ul>`):''}
+    ${sec('F','Shipped','effort → outcome',ship)}
+  </div>`;
+  $('#modal').classList.add('show');
+  if(typeof location!=='undefined'&&location.hash!=='#s='+s.id){ try{history.replaceState(null,'','#s='+s.id);}catch(e){} }
+}
+function closeDetail(){ const m=$('#modal'); m.classList.remove('show'); m.innerHTML='';
+  if(typeof location!=='undefined'&&location.hash.startsWith('#s=')){ try{history.replaceState(null,'',location.pathname+location.search);}catch(e){} } }
+
+// ---------- "Working with Claude Code" ----------
+function primarySkill(s){ const e=Object.entries(s.skills||{}); return e.length? e.sort((a,b)=>b[1]-a[1])[0][0] : null; }
+// "Brief quality" = how many of 4 concrete specificity signals the opening prompt has.
+function briefInfo(s){ const t=s.mission||''; const sig=[];
+  if(t.length>=70) sig.push('detailed');
+  if(/[`/]|\.[a-z]{1,5}\b|https?:/i.test(t)) sig.push('file/code refs');
+  if(/\b(must|should|ensure|only|don'?t|do not|exactly|constraint|acceptance|require|keep|avoid|instead)\b/i.test(t)) sig.push('constraints');
+  if(/\b(then|after|first|step|finally|also|and then)\b/i.test(t) || t.length>170) sig.push('multi-step');
+  return {score:sig.length, signals:sig}; }
+function briefScore(s){ return briefInfo(s).score; }
+function outcomeBucket(s){ if(s.commits) return 'shipped'; if(!s.hasRepo) return 'exploratory';
+  if(s.writes>0||s.locAdd>0||s.locDel>0) return 'throwaway'; return 'other'; }
+
+function renderCorr(F){
+  const by={}; F.forEach(s=>{ const v=by[s.project]=by[s.project]||{c:0,t:0,i:0};
+    v.c+=s.corrections||0; v.i+=s.interrupts||0; v.t+=s.nAssistant||0; });
+  const arr=Object.entries(by).filter(([p,v])=>v.t>30).map(([p,v])=>({p,rate:100*v.c/v.t,c:v.c,i:v.i,t:v.t})).sort((a,b)=>a.rate-b.rate);
+  const tc=F.reduce((a,s)=>a+(s.corrections||0),0), ti=F.reduce((a,s)=>a+(s.interrupts||0),0);
+  $('#corrTag').textContent=`${tc} corrections · ${ti} interrupts`;
+  const ex=[]; for(const s of F){ for(let e of (s.corrEx||[])){ e=e.replace(/\s+/g,' ').trim(); if(e.length>46)e=e.slice(0,44)+'…'; if(ex.length<3 && !ex.includes(e)) ex.push(e); } if(ex.length>=3) break; }
+  $('#corrEx').textContent = ex.length ? 'flagged in your messages, e.g. '+ex.map(e=>'“'+e+'”').join(', ') : 'no corrections flagged in this view.';
+  charts.corr.setOption({
+    tooltip:{trigger:'axis',axisPointer:{type:'none'},...TT,formatter:p=>{const v=by[p[0].name]||{c:0,i:0,t:0};
+      return `${p[0].name}<br><b>${p[0].value.toFixed(1)}</b> corrections / 100 turns<br>${v.c} corrections · ${v.i} interrupts · ${v.t} turns`;}},
+    grid:{left:8,right:46,top:8,bottom:22,containLabel:true},
+    xAxis:{type:'value',...axisStyle,axisLabel:{color:'#6B7280',fontSize:10}},
+    yAxis:{type:'category',data:arr.map(a=>a.p),...axisStyle,axisLine:{show:false},axisLabel:{color:'#3A4452',fontSize:11}},
+    series:[{type:'bar',data:arr.map(a=>({value:+a.rate.toFixed(2),itemStyle:{color:a.rate>2?'#C0392B':a.rate>0.8?'#B7791F':'#138A5E',borderRadius:[0,4,4,0]}})),
+      barMaxWidth:15,label:{show:true,position:'right',color:'#6B7280',fontSize:10,formatter:p=>p.value.toFixed(1)}}]
+  },true);
+}
+const BRIEF_TICK={0:'0 · bare ask',1:'1 signal',2:'2 signals',3:'3 signals',4:'4 · fully specified'};
+function renderBriefq(F){
+  const groups={};
+  F.forEach(s=>{ if(!s.mission) return; const bi=briefInfo(s); (groups[bi.score]=groups[bi.score]||[]).push([bi.score, sessionCost(s), s, bi.signals]); });
+  const series=[0,1,2,3,4].filter(k=>groups[k]).map(k=>({ name:BRIEF_TICK[k], type:'scatter',
+    data:groups[k].map((d,i)=>[k+((i%7)-3)*0.06, +d[1].toFixed(2), d[2].project, d[2].corrections||0, d[3].join(', ')||'none']),
+    symbolSize:9, itemStyle:{color:['#C0392B','#B7791F','#B7791F','#3C8C5A','#138A5E'][k],opacity:.78,borderColor:'#fff',borderWidth:1} }));
+  charts.briefq.setOption({
+    tooltip:{...TT,formatter:p=>`<b>${Math.round(p.value[0])} of 4</b> specificity signals<br>present: ${esc(p.value[4])}<br>${esc(p.value[2])} · ${fmtUSD(p.value[1])} · ${p.value[3]} corrections`},
+    grid:{left:50,right:18,top:12,bottom:48},
+    xAxis:{type:'value',min:-0.5,max:4.5,name:'specificity signals in the opening prompt',nameLocation:'middle',nameGap:30,nameTextStyle:{color:'#6B7280',fontSize:10.5},
+      ...axisStyle,axisLabel:{color:'#6B7280',fontSize:10,interval:0,formatter:v=>Number.isInteger(v)&&v>=0&&v<=4?BRIEF_TICK[v]:''},splitLine:{show:false}},
+    yAxis:{type:'value',name:'$ / session',nameTextStyle:{color:'#6B7280',fontSize:10},...axisStyle,axisLabel:{color:'#6B7280',fontSize:10,formatter:v=>'$'+fmtNum(v)}},
+    series
+  },true);
+}
+function renderErrtax(F){
+  const c=aggCounts(F,'errSig');
+  const arr=Object.entries(c).sort((a,b)=>b[1]-a[1]).slice(0,12).reverse();
+  const tot=Object.values(c).reduce((a,b)=>a+b,0);
+  $('#errTag').textContent=fmtNum(tot)+' errors';
+  charts.errtax.setOption({
+    tooltip:{trigger:'axis',axisPointer:{type:'none'},...TT,formatter:p=>`${esc(p[0].name)}<br><b>${fmtNum(p[0].value)}</b> times`},
+    grid:{left:8,right:44,top:8,bottom:22,containLabel:true},
+    xAxis:{type:'value',...axisStyle,axisLabel:{color:'#6B7280',fontSize:10,formatter:fmtNum}},
+    yAxis:{type:'category',data:arr.map(a=>a[0].length>42?a[0].slice(0,40)+'…':a[0]),...axisStyle,axisLine:{show:false},
+      axisLabel:{color:'#3A4452',fontSize:10.5,fontFamily:'ui-monospace,Menlo,monospace'}},
+    series:[{type:'bar',data:arr.map(a=>a[1]),barMaxWidth:14,itemStyle:{color:'#C0392B',borderRadius:[0,4,4,0]},
+      label:{show:true,position:'right',color:'#6B7280',fontSize:10,formatter:p=>fmtNum(p.value)}}]
+  },true);
+}
+function renderCacheecon(F){
+  const by={}; F.forEach(s=>{ const v=by[s.project]=by[s.project]||{c5:0,c1:0};
+    for(const m in s.modelTok){ v.c5+=s.modelTok[m].cc5; v.c1+=s.modelTok[m].cc1; } });
+  const arr=Object.entries(by).map(([p,v])=>({p,...v})).filter(a=>a.c5+a.c1>0).sort((a,b)=>(a.c5+a.c1)-(b.c5+b.c1));
+  let t5=0,t1=0; arr.forEach(a=>{t5+=a.c5;t1+=a.c1;});
+  $('#cacheEconTag').textContent=`${Math.round(100*t1/Math.max(1,t5+t1))}% on 1-hour`;
+  charts.cacheecon.setOption({
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'},...TT,formatter:p=>{const v=by[p[0].name]||{c5:0,c1:0};
+      return `${p[0].name}<br>5-min: <b>${fmtNum(v.c5)}</b> (1.25×)<br>1-hour: <b>${fmtNum(v.c1)}</b> (2×)`;}},
+    grid:{left:8,right:46,top:8,bottom:22,containLabel:true},
+    xAxis:{type:'value',...axisStyle,axisLabel:{color:'#6B7280',fontSize:10,formatter:fmtNum}},
+    yAxis:{type:'category',data:arr.map(a=>a.p),...axisStyle,axisLine:{show:false},axisLabel:{color:'#3A4452',fontSize:11}},
+    series:[
+      {name:'5-min',type:'bar',stack:'k',data:arr.map(a=>a.c5),itemStyle:{color:'#CBD2DA'},barMaxWidth:16},
+      {name:'1-hour',type:'bar',stack:'k',data:arr.map(a=>a.c1),itemStyle:{color:'#0B5E5D',borderRadius:[0,3,3,0]},barMaxWidth:16}]
+  },true);
+}
+function renderDeleg(F){
+  const byModel={};
+  F.forEach(s=>(s.subs||[]).forEach(x=>{ const tok=(x.in||0)+(x.out||0); const m=x.m||'unknown';
+    (byModel[m]=byModel[m]||[]).push([tok, x.nw||0, x.nt||0, s.project]); }));
+  const series=Object.entries(byModel).map(([m,d])=>({name:m.replace('claude-','').replace('google/',''),type:'scatter',
+    data:d, symbolSize:v=>Math.max(6,Math.min(26,5+Math.sqrt(v[2])*1.6)),
+    itemStyle:{color:modelColor(m),opacity:.62,borderColor:'#fff',borderWidth:.5}}));
+  const n=Object.values(byModel).reduce((a,d)=>a+d.length,0);
+  $('#delegTag').textContent=fmtNum(n)+' sub-agents';
+  charts.deleg.setOption({
+    tooltip:{...TT,formatter:p=>`${esc(p.value[3])}<br><b>${fmtNum(p.value[0])}</b> tokens · <b>${p.value[1]}</b> writes · ${p.value[2]} tools`},
+    legend:{bottom:0,icon:'circle',textStyle:{color:'#3A4452',fontSize:10},itemWidth:8,itemHeight:8},
+    grid:{left:48,right:16,top:12,bottom:42},
+    xAxis:{type:'log',min:100,name:'tokens',nameLocation:'middle',nameGap:24,nameTextStyle:{color:'#6B7280',fontSize:10},...axisStyle,axisLabel:{color:'#6B7280',fontSize:10,formatter:fmtNum}},
+    yAxis:{type:'value',name:'files written',nameTextStyle:{color:'#6B7280',fontSize:10},...axisStyle,axisLabel:{color:'#6B7280',fontSize:10}},
+    series
+  },true);
+}
+function renderOutcome(F){
+  const by={shipped:{c:0,h:0,n:0},exploratory:{c:0,h:0,n:0},throwaway:{c:0,h:0,n:0},other:{c:0,h:0,n:0}};
+  F.forEach(s=>{ const b=by[outcomeBucket(s)]; b.c+=sessionCost(s); b.h+=s.active/36e5; b.n++; });
+  const CLR={shipped:'#138A5E',exploratory:'#0F4C81',throwaway:'#B7791F',other:'#CBD2DA'};
+  const data=Object.entries(by).filter(([k,v])=>v.c>0.001||v.n>0).map(([k,v])=>({name:k,value:+v.c.toFixed(2),itemStyle:{color:CLR[k]},h:v.h,n:v.n}));
+  $('#outcomeTag').textContent=fmtUSD(by.throwaway.c)+' throwaway';
+  charts.outcome.setOption({
+    tooltip:{...TT,formatter:p=>{const v=+p.value||0,h=(p.data&&p.data.h)||0,n=(p.data&&p.data.n)||0;
+      return `<b>${p.name}</b><br>${fmtUSD(v)} · ${(+h).toFixed(1)}h · ${n} sessions (${p.percent}%)`;}},
+    legend:{bottom:0,icon:'circle',textStyle:{color:'#3A4452',fontSize:11},itemWidth:9,itemHeight:9},
+    series:[{type:'pie',radius:['46%','70%'],center:['50%','44%'],avoidLabelOverlap:true,
+      itemStyle:{borderColor:'#fff',borderWidth:3},label:{show:false},data}]
+  },true);
+}
+function renderSkillScore(F){
+  const by={}; F.forEach(s=>{ const k=primarySkill(s)||'(no skill)'; const v=by[k]=by[k]||{n:0,cost:0,out:0,corr:0,turns:0,ship:0};
+    v.n++; v.cost+=sessionCost(s); v.out+=s.tokensOut+s.subTokensOut; v.corr+=s.corrections||0; v.turns+=s.nAssistant||0; if(s.commits)v.ship++; });
+  const arr=Object.entries(by).map(([k,v])=>({k,...v,cr:v.turns?100*v.corr/v.turns:0,sr:100*v.ship/v.n})).sort((a,b)=>b.cost-a.cost);
+  const th=$('#skilltbl thead'), tb=$('#skilltbl tbody');
+  th.innerHTML='<tr><th>Skill / feature</th><th>Sessions</th><th>Est. cost</th><th>Out tok</th><th>Corr / 100t</th><th>Shipped</th></tr>';
+  tb.innerHTML=arr.map(a=>`<tr>
+    <td class="proj">${esc(cleanSkill(a.k))}</td>
+    <td>${a.n}</td>
+    <td>${fmtUSD(a.cost)}</td>
+    <td class="mut">${fmtNum(a.out)}</td>
+    <td class="${a.cr>2?'warn':''}">${a.cr.toFixed(1)}</td>
+    <td>${a.ship?'<b style="color:#138A5E">'+Math.round(a.sr)+'%</b>':'<span class="mut">0%</span>'}</td>
+  </tr>`).join('');
+  $('#skillScoreTag').textContent=arr.length+' skills';
+}
+function renderRecords(F){
+  if(!F.length){ $('#recList').innerHTML=''; return; }
+  const recs=[]; const add=(cat,html)=>recs.push({cat,html});
+  const byActive=[...F].sort((a,b)=>b.active-a.active)[0];
+  add('RECORD',`Longest session: <b>${fmtDur(byActive.active)}</b> active — ${esc(byActive.project)}`);
+  const cm=F.filter(s=>s.commits).sort((a,b)=>b.commits.n-a.commits.n)[0];
+  if(cm) add('SHIPPED',`Most commits in a session: <b>${cm.commits.n}</b> (${cm.commits.merged} merged) — ${esc(cm.project)}`);
+  const cheap=F.filter(s=>s.commits&&s.commits.merged&&sessionCost(s)>0.01).map(s=>({s,v:sessionCost(s)/s.commits.merged})).sort((a,b)=>a.v-b.v)[0];
+  if(cheap) add('SPEND',`Cheapest merged commit: <b>${fmtUSD(cheap.v)}</b> — ${esc(cheap.s.project)}`);
+  const clean=F.filter(s=>s.nToolUse>30).map(s=>({s,e:s.nToolErr/Math.max(1,s.nToolResults)})).sort((a,b)=>a.e-b.e)[0];
+  if(clean) add('PATTERN',`Cleanest run: <b>${(100*clean.e).toFixed(1)}%</b> tool errors over ${clean.s.nToolUse} calls — ${esc(clean.s.project)}`);
+  const noredir=F.filter(s=>(s.corrections||0)===0&&s.nAssistant>40).sort((a,b)=>b.nAssistant-a.nAssistant)[0];
+  if(noredir) add('QUALITY',`Longest zero-correction run: <b>${noredir.nAssistant}</b> turns, no redirects — ${esc(noredir.project)}`);
+  const fan=[...F].sort((a,b)=>b.nSubagents-a.nSubagents)[0];
+  if(fan&&fan.nSubagents) add('RECORD',`Biggest fan-out: <b>${fan.nSubagents}</b> sub-agents — ${esc(fan.project)}`);
+  // longest active-day streak
+  const days=new Set(); F.forEach(s=>Object.keys(s.cal).forEach(d=>days.add(d)));
+  const sorted=[...days].sort(); let best=0,cur=0,prev=null;
+  sorted.forEach(d=>{ if(prev&&(new Date(d)-new Date(prev))===864e5)cur++; else cur=1; best=Math.max(best,cur); prev=d; });
+  if(best>1) add('PATTERN',`Longest active-day streak: <b>${best}</b> consecutive days`);
+  const out=[...F].sort((a,b)=>(b.tokensOut+b.subTokensOut)-(a.tokensOut+a.subTokensOut))[0];
+  add('RECORD',`Most output: <b>${fmtNum(out.tokensOut+out.subTokensOut)}</b> tokens — ${esc(out.project)}`);
+  $('#recList').innerHTML=recs.slice(0,8).map(x=>
+    `<div class="ins">${itag(x.cat)}<span>${x.html}</span></div>`).join('');
 }
 
 // ---------- table ----------
 const COLS=[
   ['project','Project','proj'],['date','Date','mut'],['active','Active','dur'],['turn','Turn','dur'],
-  ['span','Span','dur'],['nTurns','Turns','n'],['nToolUse','Tools','n'],['nSubagents','Subagents','n'],
-  ['tokensOut','Out tok','tok'],['primaryModel','Model','mod']
+  ['span','Span','dur'],['cost','Cost','usd'],['nToolUse','Tools','n'],['nSubagents','Subagents','n'],
+  ['ship','Ship','n'],['tokensOut','Out tok','tok'],['primaryModel','Model','mod']
 ];
 function renderTable(F){
   const th=$('#tbl thead'), tb=$('#tbl tbody');
   th.innerHTML='<tr>'+COLS.map(c=>`<th data-k="${c[0]}">${c[1]}${sortKey===c[0]?(sortDir<0?' ↓':' ↑'):''}</th>`).join('')+'</tr>';
   th.querySelectorAll('th').forEach(h=>h.onclick=()=>{ const k=h.dataset.k; if(sortKey===k)sortDir*=-1; else{sortKey=k;sortDir=-1;} renderTable(filtered()); });
-  const rows=[...F].sort((a,b)=>{ let x=a[sortKey],y=b[sortKey]; if(x==null)x=-1; if(y==null)y=-1;
+  const q=tableQuery.trim().toLowerCase();
+  let Fq = q ? F.filter(s=>[s.project,s.mission,s.branch,s.primaryModel,s.id,s.date].some(v=>v&&(''+v).toLowerCase().includes(q))) : F;
+  const keyVal=(s,k)=> k==='cost'?sessionCost(s) : k==='ship'?(s.commits?s.commits.n:0) : s[k];
+  const rows=[...Fq].sort((a,b)=>{ let x=keyVal(a,sortKey),y=keyVal(b,sortKey); if(x==null)x=-1; if(y==null)y=-1;
     if(typeof x==='string')return sortDir*x.localeCompare(y); return sortDir*(x-y); });
+  const anomThr=costAnomThr(F.map(sessionCost));
   tb.innerHTML=rows.map(s=>{
-    const c=projColor[s.project];
+    const c=projColor[s.project], cost=sessionCost(s);
+    const ship=s.commits?`<b style="color:#138A5E">${s.commits.n}</b>${s.commits.merged<s.commits.n?'<span style="color:#CBD2DA">·'+(s.commits.n-s.commits.merged)+'</span>':''}`:(s.hasRepo?'<span class="mut">0</span>':'<span class="mut" title="no repo">–</span>');
     return `<tr>
-      <td class="proj"><span class="dot" style="background:${c}"></span>${s.project}${s.estimated?'<span class="est">est</span>':''}</td>
+      <td class="proj"><span class="dot" style="background:${c}"></span>${esc(s.project)}${s.estimated?'<span class="est">est</span>':''}</td>
       <td class="mut">${s.date}</td>
       <td>${fmtDur(s.active)}</td>
       <td>${fmtDur(s.turn)}</td>
       <td class="mut">${fmtDur(s.span)}</td>
-      <td>${s.nTurns||'–'}</td>
+      <td class="${cost>anomThr?'warn':''}"${cost>anomThr?' title="cost anomaly: >4× median"':''}>${fmtUSD(cost)}</td>
       <td>${s.nToolUse}</td>
       <td class="mut">${s.nSubagents||'–'}</td>
-      <td>${fmtNum(s.tokensOut+s.subTokensOut)}</td>
+      <td>${ship}</td>
+      <td class="mut">${fmtNum(s.tokensOut+s.subTokensOut)}</td>
       <td class="mut">${(s.primaryModel||'–').replace('claude-','').replace('google/','')}</td>
     </tr>`; }).join('');
-  $('#cntTag').textContent=F.length+' shown';
+  tb.querySelectorAll('tr').forEach((tr,i)=>tr.onclick=()=>openDetail(rows[i]));
+  $('#cntTag').textContent = q ? rows.length+' of '+F.length : F.length+' shown';
 }
 
 // ---------- orchestrate ----------
@@ -759,12 +1280,18 @@ function renderAll(){
   renderProj(F); renderScatter(F); renderTurnHist(F); renderModels(F);
   renderTooltree(F); renderFiletree(F); renderNet(F); renderBash(F); renderThroughput(F); renderTokens(F);
   renderSkills(F); renderDomains(F); renderThemes(F); renderChurn(F); renderHotspots(F); renderCost(F);
-  renderTable(F);
+  renderShipped(F); renderRework(F); renderBenchmark(F);
+  renderCorr(F); renderBriefq(F); renderErrtax(F); renderCacheecon(F); renderDeleg(F); renderOutcome(F);
+  renderSkillScore(F); renderRecords(F);
+  renderInsights(F); renderTable(F);
 }
 
 // ---------- controls ----------
 function initControls(){
   $('#gen').innerHTML=`<b>${DATA.nSessions}</b> sessions analysed<br>generated ${new Date(DATA.generatedAt).toLocaleString()}`;
+  $('#modal').onclick=e=>{ if(e.target.id==='modal') closeDetail(); };
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeDetail(); });
+  $('#tsearch').addEventListener('input',e=>{ tableQuery=e.target.value; renderTable(filtered()); });
   $('#capLab').textContent=DATA.idleCapSec+'s';
   $('#turnCntLab').textContent=S0.filter(s=>!s.estimated).length;
   // models
@@ -798,6 +1325,9 @@ function syncChips(){ document.querySelectorAll('#projChips .chip').forEach(ch=>
 
 initControls();
 renderAll();
+// shareable deep-link to a single session: dashboard.html#s=<id>
+function openFromHash(){ if(typeof location==='undefined')return; const m=(location.hash||'').match(/^#s=([0-9a-f]{4,8})$/); if(m){ const s=S0.find(x=>x.id===m[1]); if(s) openDetail(s); } }
+window.addEventListener('hashchange',openFromHash); openFromHash();
 window.addEventListener('resize',()=>Object.values(charts).forEach(c=>c.resize()));
 </script>
 </body>

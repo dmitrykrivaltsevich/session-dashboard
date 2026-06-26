@@ -80,8 +80,53 @@ distribution, project breakdown, scatter, table).
 - **Output ledger** — lines added/removed per project (Edit churn)
 - **Codebase hotspots** — treemap of the most-touched files
 - **Estimated cost** — per-project spend, plus "$ saved by the cache" (see Cost below)
+- **Shipped code** *(effort → outcome)* — commits made in each project's real git repo during its sessions, merged-to-main vs still-on-branch. Tooltip shows ~$/commit.
+- **Durability of output** *(rework)* — durable lines vs lines added-then-deleted within 2 weeks (a neutral, approximate, file-level churn signal).
+- **Cost in context** — your list-price $/active-day vs published benchmarks (log scale). See Benchmarks below.
 
-- **Sessions table** — sortable, reflects all filters
+**Working with Claude Code** (craft, reliability & delegation — leading indicators)
+- **First-try & correction rate** — short corrective replies you typed + interrupts per 100 turns, by project. Uses a **built-in heuristic lexicon** (`CORRECTION`/`AFFIRM` regexes in `etl.py` — negative-quality judgments, missed requirements, redirects, English + a little Russian; an affirmation guard means "yes remove it" isn't counted). It's a fixed matcher that works for any user — **tune the regex for your own phrasing**; the card shows the actual phrases it flagged in *your* transcripts.
+- **First-prompt brief quality vs cost** — does a well-specified opening prompt (constraints, file refs, acceptance criteria) lead to cheaper, lower-correction sessions?
+- **Tool-error taxonomy** — every `is_error` result clustered by normalized signature (a fixable punch-list).
+- **Cache economics** — cache writes split by 5-min (1.25×) vs 1-hour (2×) TTL, per project.
+- **Delegation: cost vs yield** — every sub-agent as a dot (tokens vs files written, by model); find expensive low-output agents.
+- **Where the spend lands** — cost by outcome: shipped / exploratory / throwaway.
+- **Per-skill scorecard** — cost, tokens, correction rate & shipped-rate per primary skill.
+- **Records & streaks** — personal bests (longest run, most commits, cheapest merged commit, cleanest run, longest streak…).
+
+**Explore & insights**
+- **What's worth knowing** — auto-generated, category-tagged findings: cost **anomalies** (top-decile outliers), spend concentration, week-over-week spend, cache savings, shipped/merged commits with ~$/merged, rework %, busiest hour. Reflects the current filter.
+- **Session deep-dive** — a rich right-side drawer (click any table row, or open `dashboard.html#s=<id>`): mission, KPI grid, turn timeline, **cost by model**, full tool & file breakdown, every prompt, cache hit, errors/thinking, and the commits it shipped (with ~$/commit and rework %).
+
+- **Sessions table** — **searchable** (project / mission / branch / model / id), sortable (incl. Cost & Ship columns), anomalous-cost rows flagged; click any row for the deep-dive
+
+## Benchmarks (Cost in context)
+
+The $/active-day reference points are fact-checked from multiple sources (mid-2026)
+and embedded in `dashboard.html` (`BENCH_DAY`):
+
+| Reference | $/active-day | Source |
+|---|---|---|
+| Anthropic — enterprise average | $13 | Anthropic Claude Code docs (vendor) |
+| Anthropic — 90th-pct ceiling | $30 | Anthropic Claude Code docs (vendor) |
+| morphllm — "daily pro" profile | $8 | morphllm token-math (independent) |
+| morphllm — full-day agent | $27 | morphllm token-math (independent) |
+| Heavy power-user (raw API) | ~$54 | CloudZero / morphllm ($400–2000/mo ÷ ~22 days) |
+
+**Caveat:** your figure is a **list-price, API-equivalent** estimate. On a Max
+subscription you pay a flat **$100–200/mo** regardless of token use, so heavy
+agentic use looks expensive on this API basis but isn't what you're billed.
+
+### Effort → outcome (commit correlation)
+
+`etl.py` reads each session's recorded `cwd`, finds the git repo, and attributes
+commits to a session when the commit lands **on a day that session was active**
+(using the idle-capped activity buckets — a stale tab left open for days does *not*
+vacuum up unrelated commits). For each session it records commit count, lines ±,
+how many merged to `main`/`master`, and the top commit subjects. Read-only (`git
+log` / `rev-list`); sessions whose `cwd` isn't a git repo are simply marked
+"no repo (research / non-code)". Like cost, this is a **heuristic** correlation —
+a commit can blend multiple sessions and human edits.
 
 ## Cost estimation
 
