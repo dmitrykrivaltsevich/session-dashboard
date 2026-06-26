@@ -100,7 +100,6 @@ if (typeof echarts === 'undefined')
   .note{font-size:11.5px;color:var(--ink-soft);line-height:1.65;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
     padding:14px 16px;margin-top:22px;box-shadow:var(--hl)}
   .note b{color:var(--ink);font-weight:600}
-  .footcols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px}
   .divider{grid-column:1/-1;display:flex;align-items:baseline;gap:14px;margin:20px 2px 2px}
   .divider h2{font-family:var(--disp);font-size:16px;font-weight:600;letter-spacing:-.01em;margin:0;white-space:nowrap}
   .divider h2{position:relative;padding-left:13px}
@@ -108,7 +107,7 @@ if (typeof echarts === 'undefined')
   .divider .ln{flex:1;height:1px;background:var(--line);align-self:center}
   .divider .sm{color:var(--muted);font-size:12px}
   @media(max-width:1280px){.kpis{grid-template-columns:repeat(4,1fr)}}
-  @media(max-width:1080px){.kpis{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.card.full{grid-column:auto}.footcols{grid-template-columns:1fr}}
+  @media(max-width:1080px){.kpis{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.card.full{grid-column:auto}}
 
   /* Insights feed */
   .insights{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--hl);
@@ -523,17 +522,20 @@ function treeData(counts,catFn,shortFn){
 }
 // ---- cost helpers (pricing comes from the data file, computed from current rates) ----
 const PRICE=DATA.pricing, PM=PRICE.models;
-function sessionCost(s){ let c=0;
-  for(const m in s.modelTok){ const p=PM[m]; if(!p) continue; const t=s.modelTok[m];
-    c += (t.in*p[0] + t.out*p[1] + t.cr*p[0]*PRICE.cacheRead
+// cost of one model's token bucket at list prices (single source for the pricing formula)
+function modelCost(m,t){ const p=PM[m]; if(!p) return 0;
+  return (t.in*p[0] + t.out*p[1] + t.cr*p[0]*PRICE.cacheRead
         + t.cc5*p[0]*PRICE.cacheWrite5m + t.cc1*p[0]*PRICE.cacheWrite1h)/1e6; }
-  return c; }
-function cacheSaved(s){ let v=0;
-  for(const m in s.modelTok){ const p=PM[m]; if(!p) continue;
-    v += s.modelTok[m].cr*p[0]*(1-PRICE.cacheRead)/1e6; }
-  return v; }
+// memoised on the (immutable) session — called dozens of times per renderAll
+function sessionCost(s){ if(s._cost!=null) return s._cost; let c=0;
+  for(const m in s.modelTok) c += modelCost(m,s.modelTok[m]); return s._cost=c; }
+function cacheSaved(s){ if(s._saved!=null) return s._saved; let v=0;
+  for(const m in s.modelTok){ const p=PM[m]; if(!p) continue; v += s.modelTok[m].cr*p[0]*(1-PRICE.cacheRead)/1e6; }
+  return s._saved=v; }
 function fmtUSD(v){ return v>=1000? '$'+(v/1000).toFixed(v<10000?1:0)+'k' : '$'+v.toFixed(v<10?2:0); }
 function cleanSkill(n){ return n.replace('claude-skills:','').replace('speckit-','spec:'); }
+function cleanModel(m){ return (m||'–').replace('claude-','').replace('google/',''); }
+function activeDays(F){ const d=new Set(); F.forEach(s=>{ for(const k in s.cal) d.add(k); }); return d; }
 
 // ---------- state ----------
 let metric='active', range='all', model='', selProj=new Set(projects), sortKey='start', sortDir=-1, tableQuery='';
@@ -577,7 +579,7 @@ const BENCH_NOTE='On a Max subscription you pay a flat $100–200/mo regardless 
 // ---------- renderers ----------
 function renderKPIs(F){
   const durs=F.map(metricVal);
-  const days=new Set(); F.forEach(s=>Object.keys(s.cal).forEach(d=>days.add(d)));
+  const days=activeDays(F);
   const outTok=F.reduce((a,s)=>a+s.tokensOut+s.subTokensOut,0);
   const totalMs=durs.reduce((a,b)=>a+b,0);
   const toolCalls=F.reduce((a,s)=>a+Object.values(s.toolCounts).reduce((x,y)=>x+y,0),0);
@@ -730,7 +732,7 @@ function renderTurnHist(F){
 
 function renderModels(F){
   const by={}; F.forEach(s=>{ const m=s.primaryModel||'unknown'; by[m]=(by[m]||0)+s.active; });
-  const arr=Object.entries(by).map(([m,v])=>({name:m.replace('claude-','').replace('google/',''),value:+(v/36e5).toFixed(2),
+  const arr=Object.entries(by).map(([m,v])=>({name:cleanModel(m),value:+(v/36e5).toFixed(2),
     itemStyle:{color:modelColor(m)}})).sort((a,b)=>b.value-a.value);
   charts.models.setOption({
     tooltip:{...TT,formatter:p=>`<b>${p.name}</b><br>${p.value} h · ${p.percent}%`},
@@ -939,7 +941,7 @@ function renderShipped(F){
 }
 function renderBenchmark(F){
   const cost=F.reduce((a,s)=>a+sessionCost(s),0);
-  const days=new Set(); F.forEach(s=>Object.keys(s.cal).forEach(d=>days.add(d)));
+  const days=activeDays(F);
   const perDay=days.size?cost/days.size:0;
   $('#benchNote').textContent=BENCH_NOTE;
   $('#benchTag').textContent=perDay?'you: $'+(perDay<100?perDay.toFixed(0):Math.round(perDay))+'/active-day':'no data';
@@ -1033,7 +1035,7 @@ function renderInsights(F){
 function openDetail(s){
   const cost=sessionCost(s), hit=sessHit(s);
   const tools=Object.entries(s.toolCounts).sort((a,b)=>b[1]-a[1]);
-  const nTools=tools.reduce((a,t)=>a+t[1],0), tmx=Math.max(1,...tools.map(t=>t[1]));
+  const nTools=tools.reduce((a,t)=>a+t[1],0);
   const files=Object.entries(s.files).sort((a,b)=>b[1]-a[1]);
   const mx=Math.max(1,...s.turns);
   const tl=s.turns.length ? s.turns.map(t=>`<span style="height:${Math.max(6,Math.round(t/mx*100))}%" title="${fmtDur(t)}"></span>`).join('')
@@ -1041,8 +1043,8 @@ function openDetail(s){
   // token + cost by model
   const inTok=s.tokensIn+s.subTokensIn, outTok=s.tokensOut+s.subTokensOut;
   const crTok=s.cacheRead+s.subCacheRead, ccTok=s.cacheCreate+s.subCacheCreate;
-  const mt=Object.entries(s.modelTok).map(([m,t])=>{const p=PM[m]; const c=p?(t.in*p[0]+t.out*p[1]+t.cr*p[0]*PRICE.cacheRead+t.cc5*p[0]*PRICE.cacheWrite5m+t.cc1*p[0]*PRICE.cacheWrite1h)/1e6:0; return {m,c};}).sort((a,b)=>b.c-a.c);
-  const modelRows=mt.map(x=>`<div class="row"><span class="k">${esc(x.m.replace('claude-','').replace('google/',''))}</span><span class="led"></span><span class="v">${fmtUSD(x.c)}</span></div>`).join('');
+  const mt=Object.entries(s.modelTok).map(([m,t])=>({m,c:modelCost(m,t)})).sort((a,b)=>b.c-a.c);
+  const modelRows=mt.map(x=>`<div class="row"><span class="k">${esc(cleanModel(x.m))}</span><span class="led"></span><span class="v">${fmtUSD(x.c)}</span></div>`).join('');
   const ship = s.commits
     ? `<div class="ship"><div class="big">${s.commits.n} commit${s.commits.n>1?'s':''} · ${s.commits.merged} merged to main</div>`
       + `<div class="sub">+${fmtNum(s.commits.add)} / −${fmtNum(s.commits.del)} lines`
@@ -1055,7 +1057,7 @@ function openDetail(s){
     <div class="mh">
       <div class="row"><h2><span class="dot" style="background:${modelColor(s.primaryModel)}"></span>${esc(s.project)}</h2>
         <button class="mclose" onclick="closeDetail()" title="Close (Esc)">✕</button></div>
-      <div class="mmeta"><span>${s.date}</span><span>${s.id}</span><span>${esc((s.primaryModel||'–').replace('claude-',''))}</span><span>${esc(s.branch||'—')}</span>${s.estimated?'<span>est&nbsp;timing</span>':''}</div>
+      <div class="mmeta"><span>${s.date}</span><span>${s.id}</span><span>${esc(cleanModel(s.primaryModel))}</span><span>${esc(s.branch||'—')}</span>${s.estimated?'<span>est&nbsp;timing</span>':''}</div>
     </div>
     ${s.mission?`<div class="mission">${esc(s.mission)}</div>`:''}
     <div class="mkpis">
@@ -1088,7 +1090,6 @@ function briefInfo(s){ const t=s.mission||''; const sig=[];
   if(/\b(must|should|ensure|only|don'?t|do not|exactly|constraint|acceptance|require|keep|avoid|instead)\b/i.test(t)) sig.push('constraints');
   if(/\b(then|after|first|step|finally|also|and then)\b/i.test(t) || t.length>170) sig.push('multi-step');
   return {score:sig.length, signals:sig}; }
-function briefScore(s){ return briefInfo(s).score; }
 function outcomeBucket(s){ if(s.commits) return 'shipped'; if(!s.hasRepo) return 'exploratory';
   if(s.writes>0||s.locAdd>0||s.locDel>0) return 'throwaway'; return 'other'; }
 
@@ -1162,7 +1163,7 @@ function renderDeleg(F){
   const byModel={};
   F.forEach(s=>(s.subs||[]).forEach(x=>{ const tok=(x.in||0)+(x.out||0); const m=x.m||'unknown';
     (byModel[m]=byModel[m]||[]).push([tok, x.nw||0, x.nt||0, s.project]); }));
-  const series=Object.entries(byModel).map(([m,d])=>({name:m.replace('claude-','').replace('google/',''),type:'scatter',
+  const series=Object.entries(byModel).map(([m,d])=>({name:cleanModel(m),type:'scatter',
     data:d, symbolSize:v=>Math.max(6,Math.min(26,5+Math.sqrt(v[2])*1.6)),
     itemStyle:{color:modelColor(m),opacity:.62,borderColor:'#fff',borderWidth:.5}}));
   const n=Object.values(byModel).reduce((a,d)=>a+d.length,0);
@@ -1222,7 +1223,7 @@ function renderRecords(F){
   const fan=[...F].sort((a,b)=>b.nSubagents-a.nSubagents)[0];
   if(fan&&fan.nSubagents) add('RECORD',`Biggest fan-out: <b>${fan.nSubagents}</b> sub-agents — ${esc(fan.project)}`);
   // longest active-day streak
-  const days=new Set(); F.forEach(s=>Object.keys(s.cal).forEach(d=>days.add(d)));
+  const days=activeDays(F);
   const sorted=[...days].sort(); let best=0,cur=0,prev=null;
   sorted.forEach(d=>{ if(prev&&(new Date(d)-new Date(prev))===864e5)cur++; else cur=1; best=Math.max(best,cur); prev=d; });
   if(best>1) add('PATTERN',`Longest active-day streak: <b>${best}</b> consecutive days`);
@@ -1262,16 +1263,17 @@ function renderTable(F){
       <td class="mut">${s.nSubagents||'–'}</td>
       <td>${ship}</td>
       <td class="mut">${fmtNum(s.tokensOut+s.subTokensOut)}</td>
-      <td class="mut">${(s.primaryModel||'–').replace('claude-','').replace('google/','')}</td>
+      <td class="mut">${cleanModel(s.primaryModel)}</td>
     </tr>`; }).join('');
   tb.querySelectorAll('tr').forEach((tr,i)=>tr.onclick=()=>openDetail(rows[i]));
   $('#cntTag').textContent = q ? rows.length+' of '+F.length : F.length+' shown';
 }
 
 // ---------- orchestrate ----------
+let curF=[];  // last filtered set — reused by the search box (search is applied inside renderTable)
 function tagText(){ return metric==='active'?'active':metric==='turn'?'turn':'span'; }
 function renderAll(){
-  const F=filtered();
+  const F=curF=filtered();
   $('#trendTag').textContent=metricLabel()+' / day';
   $('#histTag').textContent=tagText();
   $('#projTag').textContent=tagText();
@@ -1291,12 +1293,12 @@ function initControls(){
   $('#gen').innerHTML=`<b>${DATA.nSessions}</b> sessions analysed<br>generated ${new Date(DATA.generatedAt).toLocaleString()}`;
   $('#modal').onclick=e=>{ if(e.target.id==='modal') closeDetail(); };
   document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeDetail(); });
-  $('#tsearch').addEventListener('input',e=>{ tableQuery=e.target.value; renderTable(filtered()); });
+  $('#tsearch').addEventListener('input',e=>{ tableQuery=e.target.value; renderTable(curF); });
   $('#capLab').textContent=DATA.idleCapSec+'s';
   $('#turnCntLab').textContent=S0.filter(s=>!s.estimated).length;
   // models
   const ms=[...new Set(S0.map(s=>s.primaryModel).filter(Boolean))].sort();
-  $('#modelSel').innerHTML='<option value="">All models</option>'+ms.map(m=>`<option value="${m}">${m.replace('claude-','')}</option>`).join('');
+  $('#modelSel').innerHTML='<option value="">All models</option>'+ms.map(m=>`<option value="${m}">${cleanModel(m)}</option>`).join('');
   $('#modelSel').onchange=e=>{ model=e.target.value; renderAll(); };
   // project chips
   $('#projChips').innerHTML=projects.map(p=>`<span class="chip on" data-p="${p}"><span class="dot" style="background:${projColor[p]}"></span>${p}</span>`).join('');

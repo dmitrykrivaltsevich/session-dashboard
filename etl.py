@@ -47,6 +47,14 @@ TOPSET = set(TOP_TOOLS)
 EXT_RE = re.compile(r'\.([A-Za-z0-9]{1,8})$')
 URL_RE = re.compile(r'https?://([^/]+)')
 WORD_RE = re.compile(r'[a-z]{4,}')
+BASH_CLEAN = re.compile(r'[^A-Za-z0-9_.-]')
+
+def add_usage(dst, u):
+    """Accumulate the 4 plain token fields of a usage object into dst (in/out/cr/cc)."""
+    dst["in"]  += u.get("input_tokens",0) or 0
+    dst["out"] += u.get("output_tokens",0) or 0
+    dst["cr"]  += u.get("cache_read_input_tokens",0) or 0
+    dst["cc"]  += u.get("cache_creation_input_tokens",0) or 0
 STOP = {"with","that","this","from","what","https","html","your","have","page",
         "about","into","does","when","they","will","them","then","there","which",
         "their","would","could","should","github"}
@@ -174,8 +182,7 @@ def content_stats(root, file_parent, valid_parents):
                     mdl = msg.get("model")
                     if sub is not None:
                         if mdl and mdl != "<synthetic>": sub["model"] = mdl
-                        sub["in"] += u.get("input_tokens",0) or 0; sub["out"] += u.get("output_tokens",0) or 0
-                        sub["cr"] += u.get("cache_read_input_tokens",0) or 0; sub["cc"] += u.get("cache_creation_input_tokens",0) or 0
+                        add_usage(sub, u)
                     if mdl and mdl != "<synthetic>":
                         mt = st["modelTok"][mdl]
                         mt["in"]  += u.get("input_tokens",0) or 0
@@ -209,9 +216,8 @@ def content_stats(root, file_parent, valid_parents):
                                 last_tool = nm
                                 inp = b.get("input") or {}
                                 if nm == "Bash":
-                                    cmd = (inp.get("command") or "").strip()
-                                    first = re.split(r'\s+', cmd)[0].split('/')[-1] if cmd else ""
-                                    first = re.sub(r'[^A-Za-z0-9_.-]', '', first)
+                                    cmd = (inp.get("command") or "").split()
+                                    first = BASH_CLEAN.sub('', cmd[0].split('/')[-1]) if cmd else ""
                                     if first and not first[0].isdigit(): st["bash"][first] += 1
                                 elif nm == "WebFetch":
                                     m = URL_RE.search(inp.get("url","") or "")
